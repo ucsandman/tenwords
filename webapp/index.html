@@ -19,10 +19,11 @@
   h1 span { opacity: 0.45; }
   form { display: flex; flex-direction: column; gap: 0.75rem; margin: 2rem 0; }
   .row { display: flex; gap: 0.5rem; }
-  input[type="url"] {
+  input[type="url"], textarea {
     flex: 1; padding: 0.7rem 0.9rem; font: inherit; font-size: 0.95rem;
     border: 1px solid #c9c2b2; border-radius: 6px; background: transparent; color: inherit;
   }
+  textarea { resize: vertical; min-height: 7rem; }
   button {
     padding: 0.7rem 1.4rem; font: inherit; font-size: 0.95rem; cursor: pointer;
     border: 1px solid #1a1a1a; border-radius: 6px; background: #1a1a1a; color: #faf8f4;
@@ -52,7 +53,8 @@
       <input type="url" id="url" placeholder="Paste an article URL…">
       <button type="submit" id="go">Condense</button>
     </div>
-    <div class="drop" id="drop">…or drop / click to choose a PDF, docx, or txt file</div>
+    <textarea id="text" placeholder="…or paste text here — a Claude or ChatGPT answer, notes, anything. Ctrl+Enter to condense."></textarea>
+    <div class="drop" id="drop" role="button" tabindex="0">…or drop / click to choose a PDF, docx, or txt file</div>
     <input type="file" id="file" accept=".pdf,.docx,.txt" hidden>
   </form>
   <p id="status"></p>
@@ -105,9 +107,19 @@
 
   $('form').addEventListener('submit', e => {
     e.preventDefault()
+    const text = $('text').value.trim()
     const url = $('url').value.trim()
-    if (!url) return setStatus('paste a URL or drop a file', true)
+    if (text) {
+      return run({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) })
+    }
+    if (!url) return setStatus('paste text, a URL, or drop a file', true)
     run({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) })
+  })
+  $('text').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault()
+      $('form').requestSubmit()
+    }
   })
 
   function sendFile(file) {
@@ -116,6 +128,9 @@
     run({ method: 'POST', body: form })
   }
   $('drop').addEventListener('click', () => $('file').click())
+  $('drop').addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('file').click() }
+  })
   $('file').addEventListener('change', () => $('file').files[0] && sendFile($('file').files[0]))
   $('drop').addEventListener('dragover', e => { e.preventDefault(); $('drop').classList.add('over') })
   $('drop').addEventListener('dragleave', () => $('drop').classList.remove('over'))

@@ -92,6 +92,24 @@ test('POST /extract accepts a txt file upload', async () => {
   }
 })
 
+test('POST /extract accepts pasted text', async () => {
+  const { server, port } = await listen(createApp(okClient))
+  try {
+    const LONG = 'w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16'
+    const res = await fetch(`http://localhost:${port}/extract`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: `${LONG}\n\nshort\n\n${LONG}` }),
+    })
+    assert.equal(res.status, 200)
+    const { blocks } = await res.json()
+    assert.equal(blocks.length, 2)
+    assert.deepEqual(blocks.map(b => b.id), ['p0', 'p1'])
+  } finally {
+    server.close()
+  }
+})
+
 test('POST /extract with neither file nor url is 400', async () => {
   const { server, port } = await listen(createApp(okClient))
   try {

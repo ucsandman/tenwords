@@ -25,8 +25,10 @@ the whole document) and cost roughly a tenth of a cent per document.
 (Developer mode → Load unpacked). Then click the TenWords icon or press
 **Alt+T** on any article. Press again (or "restore original") to undo.
 
-**On documents and URLs:** open http://localhost:4710 — paste a URL or
-drop a PDF/docx/txt.
+**On documents, URLs, and pasted text:** open http://localhost:4710 —
+paste a URL, drop a PDF/docx/txt, or paste raw text (a long Claude or
+ChatGPT answer, meeting notes, anything) into the text box and hit
+Condense (Ctrl+Enter works too).
 
 ## How it works
 
@@ -41,7 +43,8 @@ a line that isn't exactly ten words. `POST /extract` turns URLs
 `POST /summarize` — `{"blocks":[{"id":"p0","text":"..."}]}` →
 `{"tldr":"...","summaries":[{"id":"p0","text":"..."}]}`
 
-`POST /extract` — multipart `file` (pdf/docx/txt) or `{"url":"..."}` →
+`POST /extract` — multipart `file` (pdf/docx/txt), `{"url":"..."}`, or
+`{"text":"..."}` (raw pasted text, paragraphs split on blank lines) →
 `{"blocks":[{"id":"p0","text":"..."}]}`
 
 ## Develop

@@ -7,7 +7,7 @@ import express from 'express'
 import multer from 'multer'
 import Anthropic from '@anthropic-ai/sdk'
 import { summarizeBlocks } from './summarizer.js'
-import { extractUrl, extractFile } from './extract.js'
+import { extractUrl, extractFile, paragraphsFromText, toBlocks } from './extract.js'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 
@@ -40,7 +40,10 @@ export function createApp(client) {
       if (typeof req.body?.url === 'string' && req.body.url.trim()) {
         return res.json({ blocks: await extractUrl(req.body.url.trim()) })
       }
-      res.status(400).json({ error: 'provide a file upload or a {url}' })
+      if (typeof req.body?.text === 'string' && req.body.text.trim()) {
+        return res.json({ blocks: toBlocks(paragraphsFromText(req.body.text)) })
+      }
+      res.status(400).json({ error: 'provide a file upload, a {url}, or pasted {text}' })
     } catch (err) {
       console.error('extract failed:', err)
       res.status(422).json({ error: `extraction failed: ${err.message}` })
