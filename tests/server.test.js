@@ -118,3 +118,17 @@ test('POST /extract surfaces extraction failure as 422', async () => {
     server.close()
   }
 })
+
+test('POST /extract with wrong multipart field name returns JSON error', async () => {
+  const { server, port } = await listen(createApp(okClient))
+  try {
+    const form = new FormData()
+    form.append('wrongfield', new Blob(['hello'], { type: 'text/plain' }), 'doc.txt')
+    const res = await fetch(`http://localhost:${port}/extract`, { method: 'POST', body: form })
+    assert.equal(res.status, 400)
+    assert.match(res.headers.get('content-type'), /application\/json/)
+    assert.ok((await res.json()).error)
+  } finally {
+    server.close()
+  }
+})

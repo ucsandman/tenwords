@@ -45,6 +45,11 @@ export function createApp(client) {
     }
   })
 
+  app.use((err, req, res, next) => {
+    console.error('request failed:', err)
+    res.status(err.status ?? 400).json({ error: err.message })
+  })
+
   return app
 }
 
