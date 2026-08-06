@@ -1,1 +1,129 @@
-<!doctype html><title>TenWords</title><p>webapp coming in Task 6</p>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TenWords</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 3rem 1rem; min-height: 100vh;
+    font-family: Georgia, 'Times New Roman', serif;
+    background: #faf8f4; color: #1a1a1a;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #16150f; color: #e8e4da; } }
+  main { width: 100%; max-width: 42rem; }
+  h1 { font-size: 1.4rem; letter-spacing: 0.35em; text-transform: uppercase; text-align: center; font-weight: normal; }
+  h1 span { opacity: 0.45; }
+  form { display: flex; flex-direction: column; gap: 0.75rem; margin: 2rem 0; }
+  .row { display: flex; gap: 0.5rem; }
+  input[type="url"] {
+    flex: 1; padding: 0.7rem 0.9rem; font: inherit; font-size: 0.95rem;
+    border: 1px solid #c9c2b2; border-radius: 6px; background: transparent; color: inherit;
+  }
+  button {
+    padding: 0.7rem 1.4rem; font: inherit; font-size: 0.95rem; cursor: pointer;
+    border: 1px solid #1a1a1a; border-radius: 6px; background: #1a1a1a; color: #faf8f4;
+  }
+  @media (prefers-color-scheme: dark) { button { background: #e8e4da; color: #16150f; border-color: #e8e4da; } }
+  button:disabled { opacity: 0.5; cursor: wait; }
+  .drop {
+    border: 1.5px dashed #c9c2b2; border-radius: 6px; padding: 1.2rem; text-align: center;
+    font-size: 0.9rem; opacity: 0.8; cursor: pointer;
+  }
+  .drop.over { border-color: currentColor; opacity: 1; }
+  #status { text-align: center; min-height: 1.5em; font-style: italic; opacity: 0.7; }
+  #status.error { color: #b3261e; font-style: normal; opacity: 1; }
+  #tldr {
+    margin: 2.5rem 0; padding: 1.2rem 1.5rem; border-left: 3px solid currentColor;
+    font-size: 1.25rem; line-height: 1.6; font-style: italic;
+  }
+  #lines p { font-size: 1.1rem; line-height: 1.7; margin: 2.2rem 0; }
+  #lines p::before { content: '¶  '; opacity: 0.3; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ten<span>Words</span></h1>
+  <form id="form">
+    <div class="row">
+      <input type="url" id="url" placeholder="Paste an article URL…">
+      <button type="submit" id="go">Condense</button>
+    </div>
+    <div class="drop" id="drop">…or drop / click to choose a PDF, docx, or txt file</div>
+    <input type="file" id="file" accept=".pdf,.docx,.txt" hidden>
+  </form>
+  <p id="status"></p>
+  <div id="tldr" hidden></div>
+  <div id="lines"></div>
+</main>
+<script>
+  const $ = id => document.getElementById(id)
+  const statusEl = $('status')
+
+  function setStatus(msg, isError = false) {
+    statusEl.textContent = msg
+    statusEl.className = isError ? 'error' : ''
+  }
+
+  async function jsonOrThrow(res) {
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(body.error || `request failed (${res.status})`)
+    return body
+  }
+
+  async function run(extractBody) {
+    $('go').disabled = true
+    $('tldr').hidden = true
+    $('lines').textContent = ''
+    try {
+      setStatus('Extracting…')
+      const { blocks } = await jsonOrThrow(await fetch('/extract', extractBody))
+      if (!blocks.length) throw new Error('no long paragraphs found to condense')
+      setStatus(`Condensing ${blocks.length} paragraphs…`)
+      const { tldr, summaries } = await jsonOrThrow(await fetch('/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blocks }),
+      }))
+      $('tldr').textContent = tldr
+      $('tldr').hidden = false
+      for (const s of summaries) {
+        const p = document.createElement('p')
+        p.textContent = s.text
+        $('lines').appendChild(p)
+      }
+      setStatus('')
+    } catch (err) {
+      setStatus(err.message, true)
+    } finally {
+      $('go').disabled = false
+    }
+  }
+
+  $('form').addEventListener('submit', e => {
+    e.preventDefault()
+    const url = $('url').value.trim()
+    if (!url) return setStatus('paste a URL or drop a file', true)
+    run({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) })
+  })
+
+  function sendFile(file) {
+    const form = new FormData()
+    form.append('file', file, file.name)
+    run({ method: 'POST', body: form })
+  }
+  $('drop').addEventListener('click', () => $('file').click())
+  $('file').addEventListener('change', () => $('file').files[0] && sendFile($('file').files[0]))
+  $('drop').addEventListener('dragover', e => { e.preventDefault(); $('drop').classList.add('over') })
+  $('drop').addEventListener('dragleave', () => $('drop').classList.remove('over'))
+  $('drop').addEventListener('drop', e => {
+    e.preventDefault()
+    $('drop').classList.remove('over')
+    if (e.dataTransfer.files[0]) sendFile(e.dataTransfer.files[0])
+  })
+</script>
+</body>
+</html>
