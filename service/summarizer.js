@@ -1,10 +1,11 @@
-import { countWords, fixToTen, parseJson } from './words.js'
+import { countWords, endsOnConnector, fixToTen, parseJson } from './words.js'
 
 export const MODEL = 'claude-haiku-4-5-20251001'
 
 const RULES = `Rules:
 - Each "words" array has EXACTLY 10 items — one word per item. Not 9, not 11.
 - The 10 words must read as one complete, natural sentence that stands alone — never a sentence that trails off or gets cut short.
+- Never end on a connector word ("and", "with", "the", "to"); the last word must complete the thought.
 - Use plain, everyday vocabulary. No jargon, no fancy words.
 - Keep the main point. Drop filler, hedging, and repetition.
 - A hyphenated word is one item.
@@ -51,17 +52,23 @@ ${JSON.stringify(blocks)}`
       .map(s => [s.id, textOf(s.words ?? s.text)]),
   )
 
-  const offenders = blocks.filter(b => countWords(byId.get(b.id) ?? '') !== 10)
-  const tldrWrong = countWords(tldr) !== 10
+  const isBad = t => countWords(t) !== 10 || endsOnConnector(t)
+  const offenders = blocks.filter(b => isBad(byId.get(b.id) ?? ''))
+  const tldrWrong = isBad(tldr)
 
   if (offenders.length > 0 || tldrWrong) {
-    const redo = offenders.map(b => ({
-      id: b.id,
-      block: b.text,
-      rejected: byId.get(b.id) ?? '',
-      rejectedWordCount: countWords(byId.get(b.id) ?? ''),
-    }))
-    const retryPrompt = `These summaries were rejected for the wrong word count ("rejected" is the bad summary, "rejectedWordCount" its actual length). Rewrite EACH as a complete standalone sentence of EXACTLY 10 words.
+    const redo = offenders.map(b => {
+      const rejected = byId.get(b.id) ?? ''
+      return {
+        id: b.id,
+        block: b.text,
+        rejected,
+        reason: countWords(rejected) !== 10
+          ? `${countWords(rejected)} words instead of 10`
+          : 'ends on a connector word, so the sentence is incomplete',
+      }
+    })
+    const retryPrompt = `These summaries were rejected ("rejected" is the bad summary, "reason" says why). Rewrite EACH as a complete standalone sentence of EXACTLY 10 words.
 
 ${RULES}
 

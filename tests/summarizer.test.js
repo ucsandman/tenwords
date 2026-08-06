@@ -62,8 +62,20 @@ test('retry prompt shows the rejected summary and its word count', async () => {
   )
   await summarizeBlocks(BLOCKS, client)
   const retryPrompt = client.calls[1].messages[0].content
-  assert.match(retryPrompt, /"rejectedWordCount":12/)
+  assert.match(retryPrompt, /12 words instead of 10/)
   assert.ok(retryPrompt.includes(TWELVE))
+})
+
+test('a 10-word summary ending on a connector gets retried', async () => {
+  const ENDS_AND = 'one two three four five six seven eight nine and'
+  const client = fakeClient(
+    { tldr: TEN, summaries: [{ id: 'p0', text: ENDS_AND }, { id: 'p1', text: TEN }] },
+    { summaries: [{ id: 'p0', words: TEN.split(' ') }] },
+  )
+  const out = await summarizeBlocks(BLOCKS, client)
+  assert.equal(client.calls.length, 2)
+  assert.match(client.calls[1].messages[0].content, /connector word/)
+  assert.equal(out.summaries.find(s => s.id === 'p0').text, TEN)
 })
 
 test('offenders get one corrective retry call', async () => {

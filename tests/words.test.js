@@ -1,6 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { countWords, fixToTen, parseJson } from '../service/words.js'
+import { countWords, endsOnConnector, fixToTen, parseJson } from '../service/words.js'
+
+test('endsOnConnector flags trailing connectors, ignoring punctuation and case', () => {
+  assert.equal(endsOnConnector('improves speed while mobile improves and'), true)
+  assert.equal(endsOnConnector('the plan works With.'), true)
+  assert.equal(endsOnConnector('the plan is now complete'), false)
+  assert.equal(endsOnConnector('the plan is now done'), false)
+  assert.equal(endsOnConnector(''), false)
+})
 
 test('countWords counts whitespace-separated tokens', () => {
   assert.equal(countWords('one two three'), 3)

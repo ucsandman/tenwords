@@ -9,6 +9,17 @@ export function fixToTen(summary, originalText) {
   return words.concat(pool.slice(0, 10 - words.length)).join(' ')
 }
 
+const CONNECTORS = new Set([
+  'and', 'or', 'but', 'with', 'for', 'the', 'a', 'an', 'to', 'of', 'in',
+  'on', 'at', 'by', 'from', 'as', 'while', 'plus', 'also', 'then',
+])
+
+export function endsOnConnector(text) {
+  const words = text.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  if (!words.length) return false
+  return CONNECTORS.has(words[words.length - 1].replace(/[.,;:!?]+$/, ''))
+}
+
 export function parseJson(text) {
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
