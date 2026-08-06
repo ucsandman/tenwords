@@ -64,7 +64,7 @@ if (isMain) {
     process.exit(1)
   }
   const port = Number(process.env.PORT) || 4710
-  const server = createApp(new Anthropic()).listen(port, () => {
+  const server = createApp(new Anthropic()).listen(port, '127.0.0.1', () => {
     console.log(`TenWords service running on http://localhost:${port}`)
   })
   server.on('error', (err) => {

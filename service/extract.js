@@ -24,7 +24,22 @@ export function paragraphsFromText(text) {
 }
 
 export async function extractUrl(url, fetchImpl = fetch) {
-  const res = await fetchImpl(url, { headers: { 'User-Agent': 'Mozilla/5.0 (TenWords local reader)' } })
+  const parsed = new URL(url)
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error(`unsupported protocol: ${parsed.protocol}`)
+  }
+  const host = parsed.hostname
+  if (
+    host === 'localhost' || host === '0.0.0.0' || host === '::1' || host === '[::1]' ||
+    /^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host) || /^169\.254\./.test(host)
+  ) {
+    throw new Error('refusing to fetch local or private addresses')
+  }
+  const res = await fetchImpl(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (TenWords local reader)' },
+    signal: AbortSignal.timeout(20000),
+  })
   if (!res.ok) throw new Error(`fetch failed with status ${res.status}`)
   return toBlocks(paragraphsFromHtml(await res.text(), url))
 }

@@ -40,6 +40,15 @@ test('extractUrl throws on http error', async () => {
   await assert.rejects(() => extractUrl('https://example.com/x', fakeFetch), /404/)
 })
 
+test('extractUrl rejects non-http protocols', async () => {
+  await assert.rejects(() => extractUrl('file:///etc/passwd'), /unsupported protocol/)
+})
+
+test('extractUrl rejects local and private addresses', async () => {
+  await assert.rejects(() => extractUrl('http://localhost:4710/x'), /local or private/)
+  await assert.rejects(() => extractUrl('http://192.168.1.1/'), /local or private/)
+})
+
 test('extractFile handles txt buffers', async () => {
   const blocks = await extractFile(Buffer.from(`${LONG}\n\nshort`, 'utf8'), 'notes.txt')
   assert.equal(blocks.length, 1)
