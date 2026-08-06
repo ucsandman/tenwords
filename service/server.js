@@ -2,8 +2,10 @@ import 'dotenv/config'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import express from 'express'
+import multer from 'multer'
 import Anthropic from '@anthropic-ai/sdk'
 import { summarizeBlocks } from './summarizer.js'
+import { extractUrl, extractFile } from './extract.js'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 
@@ -23,6 +25,23 @@ export function createApp(client) {
     } catch (err) {
       console.error('summarize failed:', err)
       res.status(502).json({ error: `summarization failed: ${err.message}` })
+    }
+  })
+
+  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } })
+
+  app.post('/extract', upload.single('file'), async (req, res) => {
+    try {
+      if (req.file) {
+        return res.json({ blocks: await extractFile(req.file.buffer, req.file.originalname) })
+      }
+      if (typeof req.body?.url === 'string' && req.body.url.trim()) {
+        return res.json({ blocks: await extractUrl(req.body.url.trim()) })
+      }
+      res.status(400).json({ error: 'provide a file upload or a {url}' })
+    } catch (err) {
+      console.error('extract failed:', err)
+      res.status(422).json({ error: `extraction failed: ${err.message}` })
     }
   })
 
