@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "TenWords",
+  "version": "0.1.0",
+  "description": "Every paragraph becomes exactly ten words.",
+  "action": { "default_title": "TenWords — toggle 10-word mode (Alt+T)" },
+  "background": { "service_worker": "background.js" },
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["http://localhost:4710/*"],
+  "commands": {
+    "toggle-tenwords": {
+      "suggested_key": { "default": "Alt+T" },
+      "description": "Toggle 10-word mode on this page"
+    }
+  }
+}
