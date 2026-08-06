@@ -65,6 +65,43 @@ test('POST /summarize surfaces upstream failure as 502 with error body', async (
   }
 })
 
+test('POST /summarize streams NDJSON events when asked', async () => {
+  const { server, port } = await listen(createApp(okClient))
+  try {
+    const res = await fetch(`http://localhost:${port}/summarize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/x-ndjson' },
+      body: JSON.stringify({ blocks: [{ id: 'p0', text: 'x '.repeat(20).trim() }] }),
+    })
+    assert.equal(res.status, 200)
+    assert.match(res.headers.get('content-type'), /application\/x-ndjson/)
+    const events = (await res.text()).trim().split('\n').map(l => JSON.parse(l))
+    assert.deepEqual(events.map(e => e.type), ['batch', 'tldr', 'done'])
+    assert.equal(events[0].summaries[0].id, 'p0')
+    assert.equal(events[1].tldr, TEN)
+  } finally {
+    server.close()
+  }
+})
+
+test('POST /summarize streaming surfaces failures as an error event', async () => {
+  const badClient = { messages: { create: async () => { throw new Error('api down') } } }
+  const { server, port } = await listen(createApp(badClient))
+  try {
+    const res = await fetch(`http://localhost:${port}/summarize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/x-ndjson' },
+      body: JSON.stringify({ blocks: [{ id: 'p0', text: 'hello world' }] }),
+    })
+    const events = (await res.text()).trim().split('\n').map(l => JSON.parse(l))
+    const last = events[events.length - 1]
+    assert.equal(last.type, 'error')
+    assert.match(last.error, /api down/)
+  } finally {
+    server.close()
+  }
+})
+
 test('GET / serves the webapp', async () => {
   const { server, port } = await listen(createApp(okClient))
   try {

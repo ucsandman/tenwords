@@ -108,6 +108,40 @@ test('missing summaries fall back to first 10 words of original', async () => {
   assert.equal(p1.text, 'orig1 orig2 orig3 orig4 orig5 orig6 orig7 orig8 orig9 orig10')
 })
 
+test('documents over 40 blocks run in parallel batches with a final tldr call', async () => {
+  const blocks = Array.from({ length: 90 }, (_, i) => ({ id: `b${i}`, text: `${LONG_TEXT} block ${i}` }))
+  const calls = []
+  const client = {
+    messages: {
+      create: async (req) => {
+        calls.push(req)
+        const prompt = req.messages[0].content
+        if (prompt.includes('ten-word summaries of one document')) {
+          return { content: [{ text: JSON.stringify({ tldr: TEN.split(' ') }) }] }
+        }
+        const ids = [...prompt.matchAll(/"id":"(b\d+)"/g)].map(m => m[1])
+        return { content: [{ text: JSON.stringify({ summaries: ids.map(id => ({ id, words: TEN.split(' ') })) }) }] }
+      },
+    },
+  }
+  const events = []
+  const out = await summarizeBlocks(blocks, client, e => events.push(e))
+  assert.equal(calls.length, 4)
+  assert.ok(calls.slice(0, 3).every(c => !c.messages[0].content.includes('"tldr"')))
+  assert.equal(out.summaries.length, 90)
+  assert.deepEqual(out.summaries.map(s => s.id), blocks.map(b => b.id))
+  assert.equal(out.tldr, TEN)
+  assert.equal(events.filter(e => e.type === 'batch').length, 3)
+  assert.equal(events.filter(e => e.type === 'tldr').length, 1)
+})
+
+test('single-batch documents emit batch and tldr progress events', async () => {
+  const client = fakeClient({ tldr: TEN, summaries: [{ id: 'p0', text: TEN }, { id: 'p1', text: TEN }] })
+  const events = []
+  await summarizeBlocks(BLOCKS, client, e => events.push(e))
+  assert.deepEqual(events.map(e => e.type), ['batch', 'tldr'])
+})
+
 test('rejects when model returns garbage twice', async () => {
   const client = {
     messages: { create: async () => ({ content: [{ text: 'not json at all' }] }) },

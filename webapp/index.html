@@ -131,6 +131,7 @@
     height: 1.05rem; margin: 1.9rem 0 1.9rem 1.8em; border-radius: 3px; background: var(--line);
     animation: pulse 1.1s ease-in-out infinite alternate;
   }
+  .tldr-skel { width: 60%; height: 1.2rem; margin: 1rem auto 0.4rem; }
   @keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
 
   .reveal { animation: rise 250ms ease-out both; }
@@ -194,19 +195,45 @@
 
   function clearResults() {
     $('tldrwrap').hidden = true
+    $('tldrwrap').querySelector('.skel')?.remove()
     $('resmeta').hidden = true
     $('lines').textContent = ''
   }
 
-  function showSkeletons(n) {
+  const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  function buildScaffold(blocks) {
+    $('tldr').textContent = ''
+    const tskel = document.createElement('div')
+    tskel.className = 'skel tldr-skel'
+    tskel.setAttribute('aria-hidden', 'true')
+    $('tldrwrap').appendChild(tskel)
+    $('tldrwrap').hidden = false
+
+    const before = blocks.reduce((n, b) => n + words(b.text), 0)
+    $('restotal').textContent = `${blocks.length} paragraph${blocks.length === 1 ? '' : 's'}, ${before.toLocaleString()} words → ${blocks.length * 10 + 10}`
+    $('copy').hidden = true
+    $('resmeta').hidden = false
+
     const widths = [92, 78, 88, 70, 84, 95, 74, 90]
-    for (let i = 0; i < Math.min(n, 12); i++) {
+    blocks.forEach((b, i) => {
       const d = document.createElement('div')
       d.className = 'skel'
       d.setAttribute('aria-hidden', 'true')
+      d.dataset.id = b.id
       d.style.width = widths[i % widths.length] + '%'
       $('lines').appendChild(d)
-    }
+    })
+  }
+
+  function fillLine(summary, indexInBatch) {
+    const skel = $('lines').querySelector(`.skel[data-id="${summary.id}"]`)
+    if (!skel) return
+    const p = document.createElement('p')
+    p.textContent = summary.text
+    p.className = 'reveal'
+    p.style.animationDelay = `${Math.min(indexInBatch * 30, 300)}ms`
+    skel.replaceWith(p)
   }
 
   async function jsonOrThrow(res) {
@@ -224,39 +251,58 @@
       setStatus('Reading…')
       const { blocks } = await jsonOrThrow(await fetch('/extract', extractBody))
       if (!blocks.length) throw new Error('No paragraphs long enough to condense were found.')
-      showSkeletons(blocks.length)
+      buildScaffold(blocks)
       const t0 = Date.now()
-      const tick = () => setStatus(`Condensing ${blocks.length} paragraph${blocks.length === 1 ? '' : 's'} · ${fmt(Math.round((Date.now() - t0) / 1000))}`)
+      let filled = 0
+      const tick = () => setStatus(`Condensing · ${filled}/${blocks.length} paragraph${blocks.length === 1 ? '' : 's'} · ${fmt(Math.round((Date.now() - t0) / 1000))}`)
       tick()
       timer = setInterval(tick, 1000)
-      const { tldr, summaries } = await jsonOrThrow(await fetch('/summarize', {
+      const res = await fetch('/summarize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Accept: 'application/x-ndjson' },
         body: JSON.stringify({ blocks }),
-      }))
+      })
+      if (!res.ok) await jsonOrThrow(res)
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+      let scrolled = false
+      let finished = false
+      while (true) {
+        const { done: eof, value } = await reader.read()
+        if (eof) break
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split('\n')
+        buf = lines.pop()
+        for (const line of lines) {
+          if (!line.trim()) continue
+          const event = JSON.parse(line)
+          if (event.type === 'batch') {
+            event.summaries.forEach(fillLine)
+            filled += event.summaries.length
+            tick()
+            if (!scrolled) {
+              scrolled = true
+              $('tldrwrap').scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' })
+            }
+          } else if (event.type === 'tldr') {
+            $('tldrwrap').querySelector('.skel')?.remove()
+            $('tldr').textContent = event.tldr
+            $('tldr').classList.add('reveal')
+          } else if (event.type === 'error') {
+            throw new Error(event.error)
+          } else if (event.type === 'done') {
+            finished = true
+          }
+        }
+      }
+      if (!finished) throw new Error('The service stopped responding mid-condense.')
       stopTimer()
-      $('lines').textContent = ''
-      $('tldr').textContent = tldr
-      $('tldrwrap').hidden = false
-      $('tldrwrap').classList.add('reveal')
-      const before = blocks.reduce((n, b) => n + words(b.text), 0)
-      $('restotal').textContent = `${blocks.length} paragraph${blocks.length === 1 ? '' : 's'}, ${before.toLocaleString()} words → ${summaries.length * 10 + 10}`
-      $('resmeta').hidden = false
-      summaries.forEach((s, i) => {
-        const p = document.createElement('p')
-        p.textContent = s.text
-        p.className = 'reveal'
-        p.style.animationDelay = `${Math.min(i * 40, 400)}ms`
-        $('lines').appendChild(p)
-      })
+      $('copy').hidden = false
       setStatus('')
-      $('tldrwrap').scrollIntoView({
-        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-        block: 'start',
-      })
     } catch (err) {
       stopTimer()
-      $('lines').textContent = ''
+      clearResults()
       setStatus(err.message, true)
     } finally {
       go.disabled = false

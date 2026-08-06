@@ -29,25 +29,44 @@
     const els = candidates()
     if (els.length === 0) return toast('TenWords: no long paragraphs found on this page')
 
-    toast('TenWords: condensing…', 0)
     const blocks = els.map((el, i) => ({ id: `p${i}`, text: el.textContent.trim() }))
-    const resp = await chrome.runtime.sendMessage({ type: 'summarize', blocks })
-    clearToast()
-    if (!resp?.ok) {
-      return toast(`TenWords: ${resp?.error || 'no response'} — start the service with launch.cmd`)
-    }
+    const elById = new Map(els.map((el, i) => [`p${i}`, el]))
+    toast(`TenWords: condensing 0/${blocks.length}…`, 0)
 
-    const byId = new Map(resp.data.summaries.map(s => [s.id, s.text]))
-    els.forEach((el, i) => {
-      const summary = byId.get(`p${i}`)
-      if (!summary) return
-      st.originals.set(el, { html: el.innerHTML, style: el.getAttribute('style') })
-      el.textContent = summary
-      el.style.lineHeight = '1.9'
-      el.style.marginTop = '1.6em'
-      el.style.marginBottom = '1.6em'
+    let replaced = 0
+    const failure = await new Promise(resolve => {
+      const port = chrome.runtime.connect({ name: 'summarize' })
+      port.onMessage.addListener(msg => {
+        if (msg.type === 'batch') {
+          for (const s of msg.summaries) {
+            const el = elById.get(s.id)
+            if (!el) continue
+            st.originals.set(el, { html: el.innerHTML, style: el.getAttribute('style') })
+            el.textContent = s.text
+            el.style.lineHeight = '1.9'
+            el.style.marginTop = '1.6em'
+            el.style.marginBottom = '1.6em'
+            replaced++
+          }
+          toast(`TenWords: condensing ${replaced}/${blocks.length}…`, 0)
+        } else if (msg.type === 'tldr') {
+          banner(msg.tldr)
+        } else if (msg.type === 'error') {
+          resolve(msg.error)
+          port.disconnect()
+        } else if (msg.type === 'done') {
+          resolve(null)
+          port.disconnect()
+        }
+      })
+      port.onDisconnect.addListener(() => resolve('lost connection to the TenWords service'))
+      port.postMessage({ blocks })
     })
-    banner(resp.data.tldr)
+    clearToast()
+    if (failure) {
+      restore()
+      return toast(`TenWords: ${failure} — start the service with launch.cmd`)
+    }
     st.active = true
   }
 

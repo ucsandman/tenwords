@@ -10,4 +10,7 @@ Local tool: condenses any text to exactly-10-word paragraph summaries.
 - `webapp/` — single static HTML file served at `/`.
 - Tests: `npm test` (node --test, no API calls). The exactly-10-words
   guarantee lives in `summarizeBlocks` — never bypass its enforcement.
+- `/summarize` streams NDJSON progress events when the request has
+  `Accept: application/x-ndjson`; plain JSON otherwise. Batching
+  (40 blocks, 4 parallel) is internal to `summarizeBlocks`.
 - Run: `launch.cmd` or `npm start`.

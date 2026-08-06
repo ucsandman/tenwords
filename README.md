@@ -16,8 +16,10 @@ only changes the port for direct webapp/API use.
 
 ## What to expect
 
-Long articles take 1-3 minutes to condense (one batched Haiku call covers
-the whole document) and cost roughly a tenth of a cent per document.
+Documents are condensed in parallel batches of 40 paragraphs (up to 4
+batches at once), and summaries stream in as each batch finishes — a
+typical long article completes in 20-40 seconds and costs roughly a
+tenth of a cent.
 
 ## Use it
 
@@ -32,16 +34,24 @@ Condense (Ctrl+Enter works too).
 
 ## How it works
 
-Surfaces send paragraph blocks to `POST /summarize`; the service makes
-one batched Haiku call, counts every summary's words, retries offenders
-once, and deterministically fixes anything still wrong — you never see
-a line that isn't exactly ten words. `POST /extract` turns URLs
-(Readability) and files (pdf-parse / mammoth) into blocks.
+Surfaces send paragraph blocks to `POST /summarize`; the service splits
+them into batches of 40, runs up to 4 batched Haiku calls in parallel,
+counts every summary's words, retries offenders once (wrong count or a
+sentence that trails off), and deterministically fixes anything still
+wrong — you never see a line that isn't exactly ten words. For
+multi-batch documents the TL;DR is written from the finished summaries
+in one final call. `POST /extract` turns URLs (Readability) and files
+(pdf-parse / mammoth) into blocks.
 
 ## API
 
 `POST /summarize` — `{"blocks":[{"id":"p0","text":"..."}]}` →
 `{"tldr":"...","summaries":[{"id":"p0","text":"..."}]}`
+
+With `Accept: application/x-ndjson` the same endpoint streams progress
+as NDJSON lines instead: `{"type":"batch","summaries":[...]}` per
+finished batch, then `{"type":"tldr","tldr":"..."}`, then
+`{"type":"done"}` (or `{"type":"error","error":"..."}`).
 
 `POST /extract` — multipart `file` (pdf/docx/txt), `{"url":"..."}`, or
 `{"text":"..."}` (raw pasted text, paragraphs split on blank lines) →

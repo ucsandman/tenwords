@@ -1,6 +1,8 @@
 import { countWords, endsOnConnector, fixToTen, parseJson } from './words.js'
 
 export const MODEL = 'claude-haiku-4-5-20251001'
+export const BATCH_SIZE = 40
+const CONCURRENCY = 4
 
 const RULES = `Rules:
 - Each "words" array has EXACTLY 10 items — one word per item. Not 9, not 11.
@@ -20,6 +22,14 @@ function textOf(value) {
   return typeof value === 'string' ? value : ''
 }
 
+const isBad = t => countWords(t) !== 10 || endsOnConnector(t)
+
+function rejectionReason(text) {
+  return countWords(text) !== 10
+    ? `${countWords(text)} words instead of 10`
+    : 'ends on a connector word, so the sentence is incomplete'
+}
+
 async function call(client, prompt) {
   const response = await client.messages.create({
     model: MODEL,
@@ -32,14 +42,18 @@ async function call(client, prompt) {
   return parseJson(firstText(response))
 }
 
-export async function summarizeBlocks(blocks, client) {
+async function summarizeBatch(blocks, client, withTldr) {
+  const tldrAsk = withTldr
+    ? ' Also write "tldr": a 10-word summary of the whole document, in the same array form.'
+    : ''
+  const tldrShape = withTldr ? '"tldr": ["word1", ..., "word10"], ' : ''
   const prompt = `You compress verbose text into plain language.
 
-Below are text blocks from one document. For EACH block, write a 10-word summary, given as a JSON array of its 10 words. Also write "tldr": a 10-word summary of the whole document, in the same array form.
+Below are text blocks from one document. For EACH block, write a 10-word summary, given as a JSON array of its 10 words.${tldrAsk}
 
 ${RULES}
 
-JSON shape: {"tldr": ["word1", ..., "word10"], "summaries": [{"id": "...", "words": ["word1", ..., "word10"]}]}
+JSON shape: {${tldrShape}"summaries": [{"id": "...", "words": ["word1", ..., "word10"]}]}
 
 Blocks:
 ${JSON.stringify(blocks)}`
@@ -52,21 +66,13 @@ ${JSON.stringify(blocks)}`
       .map(s => [s.id, textOf(s.words ?? s.text)]),
   )
 
-  const isBad = t => countWords(t) !== 10 || endsOnConnector(t)
   const offenders = blocks.filter(b => isBad(byId.get(b.id) ?? ''))
-  const tldrWrong = isBad(tldr)
+  const tldrWrong = withTldr && isBad(tldr)
 
   if (offenders.length > 0 || tldrWrong) {
     const redo = offenders.map(b => {
       const rejected = byId.get(b.id) ?? ''
-      return {
-        id: b.id,
-        block: b.text,
-        rejected,
-        reason: countWords(rejected) !== 10
-          ? `${countWords(rejected)} words instead of 10`
-          : 'ends on a connector word, so the sentence is incomplete',
-      }
+      return { id: b.id, block: b.text, rejected, reason: rejectionReason(rejected) }
     })
     const retryPrompt = `These summaries were rejected ("rejected" is the bad summary, "reason" says why). Rewrite EACH as a complete standalone sentence of EXACTLY 10 words.
 
@@ -93,8 +99,9 @@ ${JSON.stringify(redo)}`
     }
   }
 
-  const allOriginal = blocks.map(b => b.text).join(' ')
-  if (countWords(tldr) !== 10) tldr = fixToTen(tldr, allOriginal)
+  if (withTldr && countWords(tldr) !== 10) {
+    tldr = fixToTen(tldr, blocks.map(b => b.text).join(' '))
+  }
 
   const summaries = blocks.map(b => {
     let text = byId.get(b.id) ?? ''
@@ -102,5 +109,75 @@ ${JSON.stringify(redo)}`
     return { id: b.id, text }
   })
 
+  return { tldr: withTldr ? tldr : null, summaries }
+}
+
+async function tldrFromSummaries(summaries, client) {
+  const allText = summaries.map(s => s.text).join(' ')
+  const prompt = `Below are ten-word summaries of one document's paragraphs, in order. Write "tldr": a 10-word summary of the whole document, as a JSON array of its 10 words.
+
+${RULES}
+
+JSON shape: {"tldr": ["word1", ..., "word10"]}
+
+Summaries:
+${JSON.stringify(summaries.map(s => s.text))}`
+  let tldr = ''
+  try {
+    tldr = textOf((await call(client, prompt)).tldr)
+    if (isBad(tldr)) {
+      const retryPrompt = `This tldr was rejected (${rejectionReason(tldr)}): ${JSON.stringify(tldr)}
+Rewrite it as a complete standalone sentence of EXACTLY 10 words covering the whole document.
+
+${RULES}
+
+JSON shape: {"tldr": ["word1", ..., "word10"]}
+
+Summaries:
+${JSON.stringify(summaries.map(s => s.text))}`
+      const retried = textOf((await call(client, retryPrompt)).tldr)
+      if (retried) tldr = retried
+    }
+  } catch {
+    // fall through to deterministic fix below
+  }
+  if (countWords(tldr) !== 10) tldr = fixToTen(tldr, allText)
+  return tldr
+}
+
+async function pool(items, limit, worker) {
+  const results = new Array(items.length)
+  let next = 0
+  async function lane() {
+    while (next < items.length) {
+      const i = next++
+      results[i] = await worker(items[i], i)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane))
+  return results
+}
+
+export async function summarizeBlocks(blocks, client, onProgress = () => {}) {
+  const batches = []
+  for (let i = 0; i < blocks.length; i += BATCH_SIZE) {
+    batches.push(blocks.slice(i, i + BATCH_SIZE))
+  }
+
+  if (batches.length === 1) {
+    const { tldr, summaries } = await summarizeBatch(blocks, client, true)
+    onProgress({ type: 'batch', summaries })
+    onProgress({ type: 'tldr', tldr })
+    return { tldr, summaries }
+  }
+
+  const results = await pool(batches, CONCURRENCY, async batch => {
+    const { summaries } = await summarizeBatch(batch, client, false)
+    onProgress({ type: 'batch', summaries })
+    return summaries
+  })
+  const summaries = results.flat()
+  const tldr = await tldrFromSummaries(summaries, client)
+  onProgress({ type: 'tldr', tldr })
   return { tldr, summaries }
 }

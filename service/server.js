@@ -22,12 +22,24 @@ export function createApp(client) {
         !blocks.every(b => b && typeof b.id === 'string' && typeof b.text === 'string')) {
       return res.status(400).json({ error: 'blocks must be a non-empty array of {id, text}' })
     }
+    if (!(req.headers.accept || '').includes('application/x-ndjson')) {
+      try {
+        return res.json(await summarizeBlocks(blocks, client))
+      } catch (err) {
+        console.error('summarize failed:', err)
+        return res.status(502).json({ error: `summarization failed: ${err.message}` })
+      }
+    }
+    res.setHeader('Content-Type', 'application/x-ndjson')
+    const send = event => res.write(JSON.stringify(event) + '\n')
     try {
-      res.json(await summarizeBlocks(blocks, client))
+      await summarizeBlocks(blocks, client, send)
+      send({ type: 'done' })
     } catch (err) {
       console.error('summarize failed:', err)
-      res.status(502).json({ error: `summarization failed: ${err.message}` })
+      send({ type: 'error', error: `summarization failed: ${err.message}` })
     }
+    res.end()
   })
 
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } })
