@@ -65,7 +65,7 @@
     clearToast()
     if (failure) {
       restore()
-      return toast(`TenWords: ${failure} — start the service with launch.cmd`)
+      return toast(`TenWords: ${failure}`, 8000)
     }
     st.active = true
   }

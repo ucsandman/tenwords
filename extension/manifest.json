@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
   "name": "TenWords",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Every paragraph becomes exactly ten words.",
   "action": { "default_title": "TenWords — toggle 10-word mode (Alt+T)" },
-  "background": { "service_worker": "background.js" },
-  "permissions": ["activeTab", "scripting"],
-  "host_permissions": ["http://localhost:4710/*"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "options_ui": { "page": "options.html", "open_in_tab": false },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["http://localhost:4710/*", "https://api.anthropic.com/*"],
   "commands": {
     "toggle-tenwords": {
       "suggested_key": { "default": "Alt+T" },

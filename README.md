@@ -27,6 +27,13 @@ tenth of a cent.
 (Developer mode → Load unpacked). Then click the TenWords icon or press
 **Alt+T** on any article. Press again (or "restore original") to undo.
 
+The extension has two modes. Out of the box it talks to the local
+service, so `launch.cmd` must be running. Or open the extension's
+options (right-click the icon → Options) and save an Anthropic API key:
+TenWords then calls Anthropic directly and needs no local service at
+all. The key stays in that browser profile (`chrome.storage.local`) and
+is sent only to `api.anthropic.com`.
+
 **On documents, URLs, and pasted text:** open http://localhost:4710 —
 paste a URL, drop a PDF/docx/txt, or paste raw text (a long Claude or
 ChatGPT answer, meeting notes, anything) into the text box and hit
@@ -61,3 +68,6 @@ finished batch, then `{"type":"tldr","tldr":"..."}`, then
 
 - `npm test` — full suite (no API key needed; Anthropic client is mocked)
 - Service code in `service/`, extension in `extension/`, webapp in `webapp/`
+- `npm run sync-ext` — copies `service/words.js` + `service/summarizer.js`
+  into `extension/lib/` so BYOK mode runs the exact same enforcement code;
+  a test fails if the copies drift, so run it after editing either file
