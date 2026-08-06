@@ -16,7 +16,7 @@ function firstText(response) {
 async function call(client, prompt) {
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 32000,
+    max_tokens: 16384,
     messages: [{ role: 'user', content: prompt }],
   })
   if (response.stop_reason === 'max_tokens') {
