@@ -1,4 +1,6 @@
-import 'dotenv/config'
+import dotenv from 'dotenv'
+
+dotenv.config({ override: true, quiet: true })
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import express from 'express'
