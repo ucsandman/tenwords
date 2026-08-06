@@ -1,8 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { toBlocks, paragraphsFromHtml, paragraphsFromText, extractUrl, extractFile } from '../service/extract.js'
+import {
+  toBlocks, paragraphsFromHtml, paragraphsFromText,
+  extractUrl, extractFile, isPrivateHost, assertPublicHost,
+} from '../service/extract.js'
 
 const LONG = 'w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16'
+const publicLookup = async () => [{ address: '93.184.216.34', family: 4 }]
+const privateLookup = async () => [{ address: '127.0.0.1', family: 4 }]
 
 test('toBlocks keeps only paragraphs with 16+ words and assigns ordered ids', () => {
   const blocks = toBlocks(['short one', LONG, '   ', LONG + ' extra'])
@@ -29,15 +34,15 @@ test('paragraphsFromHtml pulls article paragraphs, not nav junk', () => {
 
 test('extractUrl fetches and returns blocks', async () => {
   const html = `<html><body><article><p>${LONG}</p></article></body></html>`
-  const fakeFetch = async () => ({ ok: true, text: async () => html })
-  const blocks = await extractUrl('https://example.com/x', fakeFetch)
+  const fakeFetch = async () => ({ ok: true, status: 200, headers: new Map(), text: async () => html })
+  const blocks = await extractUrl('https://example.com/x', fakeFetch, publicLookup)
   assert.equal(blocks.length, 1)
   assert.equal(blocks[0].id, 'p0')
 })
 
 test('extractUrl throws on http error', async () => {
-  const fakeFetch = async () => ({ ok: false, status: 404, text: async () => '' })
-  await assert.rejects(() => extractUrl('https://example.com/x', fakeFetch), /404/)
+  const fakeFetch = async () => ({ ok: false, status: 404, headers: new Map(), text: async () => '' })
+  await assert.rejects(() => extractUrl('https://example.com/x', fakeFetch, publicLookup), /404/)
 })
 
 test('extractUrl rejects non-http protocols', async () => {
@@ -47,6 +52,67 @@ test('extractUrl rejects non-http protocols', async () => {
 test('extractUrl rejects local and private addresses', async () => {
   await assert.rejects(() => extractUrl('http://localhost:4710/x'), /local or private/)
   await assert.rejects(() => extractUrl('http://192.168.1.1/'), /local or private/)
+})
+
+test('isPrivateHost detects private/loopback forms', () => {
+  for (const host of [
+    'localhost', '127.0.0.1', '192.168.1.1', '::1', '[::1]',
+    '::ffff:127.0.0.1', 'fd00::1', 'fe80::1',
+  ]) {
+    assert.equal(isPrivateHost(host), true, host)
+  }
+  for (const host of [
+    'example.com', '93.184.216.34', '2606:2800:220:1:248:1893:25c8:1946',
+  ]) {
+    assert.equal(isPrivateHost(host), false, host)
+  }
+})
+
+test('assertPublicHost rejects a hostname whose DNS resolves to a private address', async () => {
+  await assert.rejects(() => assertPublicHost('evil.example.com', privateLookup), /local or private/)
+})
+
+test('assertPublicHost accepts a hostname whose DNS resolves to a public address', async () => {
+  await assert.doesNotReject(() => assertPublicHost('example.com', publicLookup))
+})
+
+test('extractUrl follows a redirect to a public host', async () => {
+  const html = `<html><body><article><p>${LONG}</p></article></body></html>`
+  let calls = 0
+  const fakeFetch = async () => {
+    calls++
+    if (calls === 1) {
+      return { ok: false, status: 302, headers: new Map([['location', 'https://example.com/final']]), text: async () => '' }
+    }
+    return { ok: true, status: 200, headers: new Map(), text: async () => html }
+  }
+  const blocks = await extractUrl('https://example.com/start', fakeFetch, publicLookup)
+  assert.equal(blocks.length, 1)
+  assert.equal(calls, 2)
+})
+
+test('extractUrl rejects a redirect to a private address', async () => {
+  const fakeFetch = async () => ({
+    ok: false, status: 302,
+    headers: new Map([['location', 'http://127.0.0.1/x']]),
+    text: async () => '',
+  })
+  await assert.rejects(
+    () => extractUrl('https://example.com/start', fakeFetch, publicLookup),
+    /local or private/,
+  )
+})
+
+test('extractUrl throws too many redirects when redirects never stop', async () => {
+  const fakeFetch = async () => ({
+    ok: false, status: 302,
+    headers: new Map([['location', 'https://example.com/next']]),
+    text: async () => '',
+  })
+  await assert.rejects(
+    () => extractUrl('https://example.com/start', fakeFetch, publicLookup),
+    /too many redirects/,
+  )
 })
 
 test('extractFile handles txt buffers', async () => {
