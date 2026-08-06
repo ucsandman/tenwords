@@ -77,3 +77,12 @@ test('rejects when model returns garbage twice', async () => {
   }
   await assert.rejects(() => summarizeBlocks(BLOCKS, client))
 })
+
+test('rejects with a clear error when the response hit the token ceiling', async () => {
+  const client = {
+    messages: {
+      create: async () => ({ stop_reason: 'max_tokens', content: [{ text: '{}' }] }),
+    },
+  }
+  await assert.rejects(() => summarizeBlocks(BLOCKS, client), /too large/)
+})

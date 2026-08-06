@@ -1,9 +1,15 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
-  toBlocks, paragraphsFromHtml, paragraphsFromText,
+  toBlocks, paragraphsFromHtml, paragraphsFromText, paragraphsFromPdfText,
   extractUrl, extractFile, isPrivateHost, assertPublicHost,
 } from '../service/extract.js'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const FIXTURES = path.join(__dirname, 'fixtures')
 
 const LONG = 'w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16'
 const publicLookup = async () => [{ address: '93.184.216.34', family: 4 }]
@@ -19,6 +25,18 @@ test('paragraphsFromText splits on blank lines', () => {
   assert.deepEqual(
     paragraphsFromText('para one line\n\npara two line\r\n\r\npara three'),
     ['para one line', 'para two line', 'para three'],
+  )
+})
+
+test('paragraphsFromPdfText drops page markers, splits on sentence boundaries, joins wrapped lines', () => {
+  const input = 'First sentence line one.\nSecond paragraph starts here because previous ended.\n\n-- 1 of 1 --\n\nwrapped line\ncontinues here.'
+  assert.deepEqual(
+    paragraphsFromPdfText(input),
+    [
+      'First sentence line one.',
+      'Second paragraph starts here because previous ended.',
+      'wrapped line continues here.',
+    ],
   )
 })
 
@@ -63,6 +81,7 @@ test('isPrivateHost detects private/loopback forms', () => {
   }
   for (const host of [
     'example.com', '93.184.216.34', '2606:2800:220:1:248:1893:25c8:1946',
+    'fda.gov', 'fcc.gov', 'feathers.dev',
   ]) {
     assert.equal(isPrivateHost(host), false, host)
   }
@@ -122,4 +141,10 @@ test('extractFile handles txt buffers', async () => {
 
 test('extractFile rejects unknown extensions', async () => {
   await assert.rejects(() => extractFile(Buffer.from('x'), 'image.png'), /unsupported/i)
+})
+
+test('extractFile handles pdf buffers, one block per paragraph not per page', async () => {
+  const buffer = fs.readFileSync(path.join(FIXTURES, 'sample.pdf'))
+  const blocks = await extractFile(buffer, 'sample.pdf')
+  assert.equal(blocks.length, 3)
 })

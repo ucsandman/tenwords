@@ -6,6 +6,9 @@
   st.busy = true
   try {
     await condense()
+  } catch (err) {
+    clearToast()
+    toast('TenWords: ' + err.message)
   } finally {
     st.busy = false
   }
@@ -26,7 +29,7 @@
     const els = candidates()
     if (els.length === 0) return toast('TenWords: no long paragraphs found on this page')
 
-    toast('TenWords: condensing…', 60000)
+    toast('TenWords: condensing…', 0)
     const blocks = els.map((el, i) => ({ id: `p${i}`, text: el.textContent.trim() }))
     const resp = await chrome.runtime.sendMessage({ type: 'summarize', blocks })
     clearToast()
@@ -91,7 +94,7 @@
       'font:13px sans-serif', 'border-radius:6px', 'box-shadow:0 2px 12px rgba(0,0,0,.3)',
     ].join(';'))
     document.body.appendChild(div)
-    setTimeout(() => div.remove(), ms)
+    if (ms > 0) setTimeout(() => div.remove(), ms)
   }
 
   function clearToast() {
