@@ -41,6 +41,31 @@ test('happy path: returns tldr and per-block summaries in input order', async ()
   assert.equal(client.calls.length, 1)
 })
 
+test('accepts the words-array response shape', async () => {
+  const client = fakeClient({
+    tldr: TEN.split(' '),
+    summaries: [
+      { id: 'p0', words: TEN.split(' ') },
+      { id: 'p1', words: TEN.split(' ') },
+    ],
+  })
+  const out = await summarizeBlocks(BLOCKS, client)
+  assert.equal(out.tldr, TEN)
+  assert.ok(out.summaries.every(s => s.text === TEN))
+  assert.equal(client.calls.length, 1)
+})
+
+test('retry prompt shows the rejected summary and its word count', async () => {
+  const client = fakeClient(
+    { tldr: TEN, summaries: [{ id: 'p0', text: TWELVE }, { id: 'p1', text: TEN }] },
+    { summaries: [{ id: 'p0', words: TEN.split(' ') }] },
+  )
+  await summarizeBlocks(BLOCKS, client)
+  const retryPrompt = client.calls[1].messages[0].content
+  assert.match(retryPrompt, /"rejectedWordCount":12/)
+  assert.ok(retryPrompt.includes(TWELVE))
+})
+
 test('offenders get one corrective retry call', async () => {
   const client = fakeClient(
     { tldr: TEN, summaries: [{ id: 'p0', text: TWELVE }, { id: 'p1', text: TEN }] },

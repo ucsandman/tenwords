@@ -3,14 +3,20 @@ import { countWords, fixToTen, parseJson } from './words.js'
 export const MODEL = 'claude-haiku-4-5-20251001'
 
 const RULES = `Rules:
-- EXACTLY 10 words per summary. Count them. Not 9, not 11.
+- Each "words" array has EXACTLY 10 items — one word per item. Not 9, not 11.
+- The 10 words must read as one complete, natural sentence that stands alone — never a sentence that trails off or gets cut short.
 - Use plain, everyday vocabulary. No jargon, no fancy words.
 - Keep the main point. Drop filler, hedging, and repetition.
-- A word is anything separated by spaces; hyphenated words count as one.
+- A hyphenated word is one item.
 - Respond with ONLY the JSON object, no other text.`
 
 function firstText(response) {
   return response.content?.[0]?.text ?? ''
+}
+
+function textOf(value) {
+  if (Array.isArray(value)) return value.filter(w => typeof w === 'string').join(' ').trim()
+  return typeof value === 'string' ? value : ''
 }
 
 async function call(client, prompt) {
@@ -28,41 +34,53 @@ async function call(client, prompt) {
 export async function summarizeBlocks(blocks, client) {
   const prompt = `You compress verbose text into plain language.
 
-Below are text blocks from one document. For EACH block, write a summary of EXACTLY 10 words. Also write "tldr": EXACTLY 10 words summarizing the whole document.
+Below are text blocks from one document. For EACH block, write a 10-word summary, given as a JSON array of its 10 words. Also write "tldr": a 10-word summary of the whole document, in the same array form.
 
 ${RULES}
 
-JSON shape: {"tldr": "...", "summaries": [{"id": "...", "text": "..."}]}
+JSON shape: {"tldr": ["word1", ..., "word10"], "summaries": [{"id": "...", "words": ["word1", ..., "word10"]}]}
 
 Blocks:
 ${JSON.stringify(blocks)}`
 
   const first = await call(client, prompt)
-  let tldr = typeof first.tldr === 'string' ? first.tldr : ''
+  let tldr = textOf(first.tldr)
   const byId = new Map(
     (Array.isArray(first.summaries) ? first.summaries : [])
-      .filter(s => s && typeof s.id === 'string' && typeof s.text === 'string')
-      .map(s => [s.id, s.text]),
+      .filter(s => s && typeof s.id === 'string')
+      .map(s => [s.id, textOf(s.words ?? s.text)]),
   )
 
   const offenders = blocks.filter(b => countWords(byId.get(b.id) ?? '') !== 10)
   const tldrWrong = countWords(tldr) !== 10
 
   if (offenders.length > 0 || tldrWrong) {
-    const retryPrompt = `These summaries had the wrong word count. Rewrite EACH to EXACTLY 10 words.
+    const redo = offenders.map(b => ({
+      id: b.id,
+      block: b.text,
+      rejected: byId.get(b.id) ?? '',
+      rejectedWordCount: countWords(byId.get(b.id) ?? ''),
+    }))
+    const retryPrompt = `These summaries were rejected for the wrong word count ("rejected" is the bad summary, "rejectedWordCount" its actual length). Rewrite EACH as a complete standalone sentence of EXACTLY 10 words.
 
 ${RULES}
 
-JSON shape: {${tldrWrong ? '"tldr": "...", ' : ''}"summaries": [{"id": "...", "text": "..."}]}
+JSON shape: {${tldrWrong ? '"tldr": ["word1", ..., "word10"], ' : ''}"summaries": [{"id": "...", "words": ["word1", ..., "word10"]}]}
 ${tldrWrong ? '\nAlso rewrite "tldr" (a 10-word summary of the whole document).\n' : ''}
 Blocks to redo:
-${JSON.stringify(offenders)}`
+${JSON.stringify(redo)}`
     try {
       const retry = await call(client, retryPrompt)
       for (const s of Array.isArray(retry.summaries) ? retry.summaries : []) {
-        if (s && typeof s.id === 'string' && typeof s.text === 'string') byId.set(s.id, s.text)
+        if (s && typeof s.id === 'string') {
+          const text = textOf(s.words ?? s.text)
+          if (text) byId.set(s.id, text)
+        }
       }
-      if (tldrWrong && typeof retry.tldr === 'string') tldr = retry.tldr
+      if (tldrWrong) {
+        const retried = textOf(retry.tldr)
+        if (retried) tldr = retried
+      }
     } catch {
       // fall through to deterministic fix below
     }
