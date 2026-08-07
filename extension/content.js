@@ -85,10 +85,10 @@
   function banner(tldr) {
     const div = document.createElement('div')
     div.setAttribute('style', [
-      'position:sticky', 'top:0', 'z-index:2147483647',
-      'display:flex', 'align-items:center', 'gap:12px',
+      'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:2147483647',
+      'display:flex', 'align-items:center', 'gap:12px', 'box-sizing:border-box',
       'padding:14px 18px', 'background:#1a1a1a', 'color:#faf8f4',
-      'font:italic 16px/1.5 Georgia,serif',
+      'font:italic 16px/1.5 Georgia,serif', 'box-shadow:0 2px 12px rgba(0,0,0,.35)',
     ].join(';'))
     const text = document.createElement('span')
     text.textContent = tldr
