@@ -41,8 +41,8 @@ parallel batches and stream onto the page as they finish, so a
 
 TenWords collects nothing. No accounts, no servers of ours, no analytics.
 
-**Homepage:** https://tenwords.vercel.app
-**Privacy policy:** https://tenwords.vercel.app/privacy.html
+**Homepage:** https://tenwords-app.vercel.app
+**Privacy policy:** https://tenwords-app.vercel.app/privacy.html
 
 ## Screenshots (1280×800, in docs/store-assets/)
 
