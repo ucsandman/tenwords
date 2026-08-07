@@ -4,6 +4,8 @@ Every paragraph becomes exactly ten words. A local service + Chrome
 extension + web page that condense verbose text (webpages, PDFs, docx,
 txt) into 10-word-per-paragraph summaries with a 10-word TL;DR.
 
+Site: https://tenwords-app.vercel.app · Chrome Web Store: in review.
+
 ## Setup
 
 1. `npm install`
