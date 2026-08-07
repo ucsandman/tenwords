@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TenWords — privacy policy</title>
+<meta name="description" content="TenWords privacy policy: no servers of ours, no analytics, your key stays in your browser.">
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="50" y="76" font-size="80" text-anchor="middle" font-family="Georgia,serif" fill="%239c2f26">%C2%B6</text></svg>'>
+<style>
+  :root { color-scheme: light dark; --bg:#fbfbfb; --ink:#1f1f1f; --muted:#595959; --line:#e2e2e2; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1b1b1b; --ink:#e8e8e8; --muted:#a8a8a8; --line:#3a3a3a; } }
+  body {
+    margin: 0; padding: 4rem 1.25rem 5rem;
+    font-family: Charter, 'Sitka Text', Cambria, Georgia, serif;
+    font-size: 1.0625rem; line-height: 1.65;
+    background: var(--bg); color: var(--ink);
+    display: flex; justify-content: center;
+  }
+  main { width: 100%; max-width: 40rem; }
+  h1 { font-size: 1.25rem; font-weight: 400; letter-spacing: 0.3em; text-transform: uppercase; }
+  h2 { margin: 2.2rem 0 0.6rem; font-size: 0.875rem; font-weight: 400; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+  a { color: inherit; text-underline-offset: 3px; }
+  footer { margin-top: 3.5rem; padding-top: 1.4rem; border-top: 1px solid var(--line); font-size: 0.875rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>TenWords privacy</h1>
+  <p>Last updated: August 6, 2026.</p>
+
+  <h2>What TenWords does with your data</h2>
+  <p>When you condense a page, the text of that page's paragraphs is sent to
+  one of two places, depending on how you configured the extension: directly
+  to Anthropic's API (if you saved an API key in the extension options), or
+  to a TenWords service running on your own machine at localhost:4710. In
+  both cases the text is sent only to produce the summaries, and TenWords
+  keeps no copy.</p>
+
+  <h2>What we collect</h2>
+  <p>Nothing. TenWords has no servers, no accounts, no analytics, no
+  telemetry, and no tracking of any kind. We never see your key, your pages,
+  or your summaries.</p>
+
+  <h2>Your API key</h2>
+  <p>The Anthropic API key you save in the options page is stored with
+  <code>chrome.storage.local</code> in your browser profile on your machine.
+  It is never synced, and it is sent only to api.anthropic.com as the
+  authentication header on summarization requests. Removing the key in the
+  options page deletes it.</p>
+
+  <h2>Third parties</h2>
+  <p>Text you condense in direct mode is processed by Anthropic under their
+  <a href="https://www.anthropic.com/legal/privacy">privacy policy</a>.
+  TenWords sends nothing to anyone else.</p>
+
+  <h2>Contact</h2>
+  <p>Questions: open an issue on the project's GitHub repository.</p>
+
+  <footer><a href="/">← TenWords</a></footer>
+</main>
+</body>
+</html>

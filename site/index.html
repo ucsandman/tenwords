@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TenWords — every paragraph in exactly ten words</title>
+<meta name="description" content="A Chrome extension that rewrites any article, PDF, or wall of AI output into ten-word lines you can actually skim.">
+<meta property="og:title" content="TenWords">
+<meta property="og:description" content="Every paragraph in exactly ten words. Skim anything.">
+<meta property="og:image" content="https://tenwords.vercel.app/og.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="50" y="76" font-size="80" text-anchor="middle" font-family="Georgia,serif" fill="%239c2f26">%C2%B6</text></svg>'>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fbfbfb; --surface: #ffffff; --ink: #1f1f1f;
+    --muted: #595959; --line: #e2e2e2; --accent: #9c2f26;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1b1b1b; --surface: #212121; --ink: #e8e8e8; --muted: #a8a8a8; --line: #3a3a3a; --accent: #e08a7e; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 4.5rem 1.25rem 5rem;
+    font-family: Charter, 'Sitka Text', Cambria, Georgia, serif;
+    font-size: 1.0625rem; line-height: 1.65;
+    background: var(--bg); color: var(--ink);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  main { width: 100%; max-width: 42rem; }
+  header { text-align: center; margin-bottom: 3.5rem; }
+  h1 { margin: 0; font-size: 1.6rem; font-weight: 400; letter-spacing: 0.32em; text-transform: uppercase; text-indent: 0.32em; }
+  h1 span { color: var(--muted); }
+  .tag { margin: 0.6rem 0 0; font-size: 1.125rem; font-style: italic; color: var(--muted); }
+  .lede { margin: 1.4rem auto 0; max-width: 36rem; text-wrap: pretty; }
+
+  .demo {
+    border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
+    padding: 1.6rem 1.8rem; margin: 0 0 1rem;
+  }
+  .demo .pair { margin: 0 0 1.4rem; }
+  .demo .pair:last-child { margin-bottom: 0; }
+  .demo .orig {
+    display: block; font-size: 0.9375rem; color: var(--muted); line-height: 1.55;
+    max-height: 6.5em; overflow: hidden; opacity: 1;
+    transition: max-height 700ms cubic-bezier(0.22, 1, 0.36, 1), opacity 500ms ease-out, margin 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .demo .ten {
+    display: block; font-size: 1.0625rem; line-height: 1.6;
+    max-height: 0; overflow: hidden; opacity: 0;
+    transition: max-height 700ms cubic-bezier(0.22, 1, 0.36, 1), opacity 500ms 200ms ease-out;
+  }
+  .demo .ten::before { content: '¶'; margin-right: 0.55em; color: var(--accent); opacity: 0.65; }
+  .demo.done .orig { max-height: 0; opacity: 0; margin: 0; }
+  .demo.done .ten { max-height: 4em; opacity: 1; }
+  .demo .pair.d1 .orig, .demo .pair.d1 .ten { transition-delay: 150ms; }
+  .demo .pair.d2 .orig, .demo .pair.d2 .ten { transition-delay: 300ms; }
+  .demobar { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 3rem; }
+  .demobar .cap { font-size: 0.875rem; color: var(--muted); font-style: italic; }
+  #replay {
+    border: 0; background: none; cursor: pointer;
+    font: inherit; font-size: 0.875rem; color: var(--muted);
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  #replay:hover { color: var(--ink); }
+  @media (prefers-reduced-motion: reduce) {
+    .demo .orig, .demo .ten { transition: none; }
+  }
+
+  h2 { margin: 3rem 0 1rem; font-size: 0.875rem; font-weight: 400; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+  ol.steps { margin: 0; padding-left: 1.2rem; }
+  ol.steps li { margin: 0.6rem 0; }
+  ul.facts { margin: 0; padding-left: 1.2rem; }
+  ul.facts li { margin: 0.55rem 0; }
+
+  .cta { margin: 3.5rem 0 0; text-align: center; }
+  .cta .store {
+    display: inline-block; padding: 0.75rem 1.8rem;
+    border: 1px solid var(--ink); border-radius: 6px;
+    background: var(--ink); color: var(--bg); text-decoration: none;
+    font-size: 1rem;
+  }
+  .cta .pending { display: block; margin-top: 0.6rem; font-size: 0.875rem; color: var(--muted); font-style: italic; }
+  details { margin: 1.6rem auto 0; max-width: 34rem; text-align: left; }
+  summary { cursor: pointer; color: var(--muted); }
+  details code { font-family: Consolas, monospace; font-size: 0.875em; }
+
+  footer { margin-top: 4.5rem; padding-top: 1.6rem; border-top: 1px solid var(--line); text-align: center; font-size: 0.875rem; color: var(--muted); }
+  footer a { color: inherit; }
+  a { color: inherit; text-underline-offset: 3px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Ten<span>Words</span></h1>
+    <p class="tag">Every paragraph in exactly ten words.</p>
+    <p class="lede">A Chrome extension that rewrites any article, PDF, or wall of
+    AI output into ten-word lines you can actually skim. Not a summary panel
+    bolted next to the page: the page itself collapses, paragraph by
+    paragraph, and restores with one click.</p>
+  </header>
+
+  <div class="demo" id="demo" aria-label="Demo: three paragraphs collapsing to ten words each">
+    <div class="pair">
+      <span class="orig">The quarterly infrastructure review found that the primary database cluster has been running close to its connection limit during weekday peaks, and the team agreed to introduce connection pooling at the service layer before adding any new read-heavy features to the platform.</span>
+      <span class="ten">Database cluster hits connection limits during peak weekday hours regularly</span>
+    </div>
+    <div class="pair d1">
+      <span class="orig">Meanwhile the mobile team shipped the offline sync rewrite, which cuts cold-start time nearly in half and removes the last dependency on the legacy storage layer that has caused most of the crash reports over the past two quarters.</span>
+      <span class="ten">Mobile team rewrites offline sync and fixes crash problems significantly</span>
+    </div>
+    <div class="pair d2">
+      <span class="orig">Finally, hiring remains the main constraint for the platform group, with two backend positions open since March, so the leads proposed pausing one of the lower-priority migration projects until at least one of those roles is filled.</span>
+      <span class="ten">Two open backend positions block progress on other platform projects</span>
+    </div>
+  </div>
+  <div class="demobar">
+    <span class="cap">Real output, unedited. Every line is exactly ten words.</span>
+    <button type="button" id="replay">Replay</button>
+  </div>
+
+  <h2>How it works</h2>
+  <ol class="steps">
+    <li>Install the extension and paste your Anthropic API key in its
+    options. Your key stays in your browser; a long article costs about a
+    tenth of a cent (Claude Haiku).</li>
+    <li>Press <strong>Alt+T</strong> on any page, or select text and
+    right-click → Condense selection.</li>
+    <li>Paragraphs collapse in place as batches finish, with a ten-word
+    TL;DR pinned on top. Press again to restore the original.</li>
+  </ol>
+
+  <h2>The guarantee</h2>
+  <ul class="facts">
+    <li>Exactly ten words per paragraph, always: word counts are enforced in
+    code, with a corrective retry and a deterministic fix. The model is never
+    trusted.</li>
+    <li>Fast on real documents: a 10,000-word article condenses in about
+    30 seconds, streamed in parallel batches of forty paragraphs.</li>
+    <li>Works beyond the browser: a small local service adds a paste-anything
+    web page plus PDF, docx, txt, and URL condensing.</li>
+  </ul>
+
+  <h2>Privacy</h2>
+  <p>There is no server of ours in the middle and no analytics. Your key
+  lives in your browser profile, and page text goes only to Anthropic to be
+  condensed. Details: <a href="/privacy.html">privacy policy</a>.</p>
+
+  <div class="cta">
+    <a class="store" href="#" aria-disabled="true">Chrome Web Store</a>
+    <span class="pending">Listing under review. Until then, install from source below.</span>
+    <details>
+      <summary>Install from source</summary>
+      <ol class="steps">
+        <li>Download the extension from the repository and unzip it.</li>
+        <li>Open <code>chrome://extensions</code>, enable Developer mode, click
+        <strong>Load unpacked</strong>, and pick the <code>extension</code> folder.</li>
+        <li>Right-click the ¶ icon → Options → paste your Anthropic API key.</li>
+      </ol>
+    </details>
+  </div>
+</main>
+<footer>
+  TenWords · <a href="/privacy.html">Privacy</a>
+</footer>
+<script>
+  const demo = document.getElementById('demo')
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+  function play() {
+    demo.classList.remove('done')
+    if (reduced) { demo.classList.add('done'); return }
+    setTimeout(() => demo.classList.add('done'), 1400)
+  }
+  document.getElementById('replay').addEventListener('click', play)
+  play()
+</script>
+</body>
+</html>
