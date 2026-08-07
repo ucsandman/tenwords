@@ -13,6 +13,26 @@ chrome.commands.onCommand.addListener((command, tab) => {
   if (command === 'toggle-tenwords' && tab?.id) trigger(tab.id)
 })
 
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: 'condense-selection',
+    title: 'Condense selection',
+    contexts: ['selection'],
+  })
+})
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId !== 'condense-selection' || !tab?.id) return
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => { window.__tenwordsSelectionOnly = true },
+    })
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] })
+  } catch (err) {
+    console.error('TenWords: cannot run on this page:', err.message)
+  }
+})
+
 function safePost(port, msg) {
   try { port.postMessage(msg) } catch { /* content side went away */ }
 }

@@ -1,11 +1,16 @@
 ;(async () => {
   const st = (window.__tenwords ??= { active: false, busy: false, originals: new Map(), banner: null })
+  const selectionOnly = window.__tenwordsSelectionOnly === true
+  delete window.__tenwordsSelectionOnly
   if (st.busy) return
-  if (st.active) return restore()
+  if (st.active) {
+    restore()
+    if (!selectionOnly) return
+  }
 
   st.busy = true
   try {
-    await condense()
+    await condense(selectionOnly)
   } catch (err) {
     clearToast()
     toast('TenWords: ' + err.message)
@@ -21,13 +26,26 @@
     return document.querySelector('article') || document.querySelector('main') || document.body
   }
 
-  function candidates() {
-    return [...container().querySelectorAll('p')].filter(p => countWords(p.textContent) >= 16)
+  function candidates(selectionOnly) {
+    const all = [...container().querySelectorAll('p')].filter(p => countWords(p.textContent) >= 16)
+    if (!selectionOnly) return all
+    const sel = getSelection()
+    if (!sel || sel.isCollapsed) return all
+    return all.filter(p => {
+      for (let i = 0; i < sel.rangeCount; i++) {
+        if (sel.getRangeAt(i).intersectsNode(p)) return true
+      }
+      return false
+    })
   }
 
-  async function condense() {
-    const els = candidates()
-    if (els.length === 0) return toast('TenWords: no long paragraphs found on this page')
+  async function condense(selectionOnly) {
+    const els = candidates(selectionOnly)
+    if (els.length === 0) {
+      return toast(selectionOnly
+        ? 'TenWords: no long paragraphs in the selection'
+        : 'TenWords: no long paragraphs found on this page')
+    }
 
     const blocks = els.map((el, i) => ({ id: `p${i}`, text: el.textContent.trim() }))
     const elById = new Map(els.map((el, i) => [`p${i}`, el]))

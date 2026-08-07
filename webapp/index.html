@@ -134,6 +134,27 @@
   .tldr-skel { width: 60%; height: 1.2rem; margin: 1rem auto 0.4rem; }
   @keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
 
+  #recent { margin: 3.5rem 0 0; padding-top: 2.2rem; border-top: 1px solid var(--line); }
+  .rhead { display: flex; justify-content: space-between; align-items: baseline; }
+  #clearrecent {
+    border: 0; background: none; cursor: pointer;
+    font: inherit; font-size: 0.875rem; color: var(--muted);
+    text-decoration: underline; text-underline-offset: 3px;
+    transition: color 150ms ease-out;
+  }
+  #clearrecent:hover { color: var(--ink); }
+  .hrow {
+    display: flex; flex-direction: column; gap: 0.15rem; width: 100%;
+    padding: 0.85rem 0.25rem; border: 0; border-bottom: 1px solid var(--line);
+    background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+    transition: background 150ms ease-out;
+  }
+  .hrow:hover { background: var(--surface); }
+  .hrow .top { display: flex; justify-content: space-between; gap: 1rem; }
+  .hrow .hsrc { font-size: 0.9375rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hrow .hdate { color: var(--muted); font-size: 0.8125rem; white-space: nowrap; }
+  .hrow .htldr { font-style: italic; color: var(--muted); font-size: 0.9375rem; }
+
   .reveal { animation: rise 250ms ease-out both; }
   @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
@@ -177,6 +198,14 @@
     <button type="button" id="copy">Copy summary</button>
   </div>
   <div id="lines"></div>
+
+  <section id="recent" hidden>
+    <div class="rhead">
+      <h2 class="lbl">Recent</h2>
+      <button type="button" id="clearrecent">Clear history</button>
+    </div>
+    <div id="recentlist"></div>
+  </section>
 </main>
 <script>
   const $ = id => document.getElementById(id)
@@ -242,7 +271,54 @@
     return body
   }
 
-  async function run(extractBody) {
+  const HKEY = 'tenwords-history'
+  const hload = () => { try { return JSON.parse(localStorage.getItem(HKEY)) || [] } catch { return [] } }
+  const hsave = list => { try { localStorage.setItem(HKEY, JSON.stringify(list.slice(0, 20))) } catch { /* history is best-effort */ } }
+
+  function renderHistory() {
+    const list = hload()
+    $('recent').hidden = list.length === 0
+    const box = $('recentlist')
+    box.textContent = ''
+    for (const h of list) {
+      const b = document.createElement('button')
+      b.type = 'button'
+      b.className = 'hrow'
+      const top = document.createElement('span')
+      top.className = 'top'
+      const src = document.createElement('span')
+      src.className = 'hsrc'
+      src.textContent = h.label
+      const date = document.createElement('span')
+      date.className = 'hdate'
+      date.textContent = new Date(h.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      top.append(src, date)
+      const tl = document.createElement('span')
+      tl.className = 'htldr'
+      tl.textContent = h.tldr
+      b.append(top, tl)
+      b.addEventListener('click', () => showSaved(h))
+      box.appendChild(b)
+    }
+  }
+
+  function showSaved(h) {
+    clearResults()
+    $('tldr').textContent = h.tldr
+    $('tldrwrap').hidden = false
+    $('restotal').textContent = h.meta
+    $('copy').hidden = false
+    $('resmeta').hidden = false
+    for (const s of h.summaries) {
+      const p = document.createElement('p')
+      p.textContent = s.text
+      $('lines').appendChild(p)
+    }
+    setStatus('')
+    $('tldrwrap').scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' })
+  }
+
+  async function run(extractBody, label) {
     const go = $('go')
     go.disabled = true
     go.classList.add('loading')
@@ -300,6 +376,14 @@
       stopTimer()
       $('copy').hidden = false
       setStatus('')
+      hsave([{
+        ts: Date.now(),
+        label,
+        tldr: $('tldr').textContent,
+        meta: $('restotal').textContent,
+        summaries: [...$('lines').querySelectorAll('p')].map(p => ({ text: p.textContent })),
+      }, ...hload()])
+      renderHistory()
     } catch (err) {
       stopTimer()
       clearResults()
@@ -315,10 +399,14 @@
     const text = $('text').value.trim()
     const url = $('url').value.trim()
     if (text) {
-      return run({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) })
+      const label = `“${text.split(/\s+/).slice(0, 7).join(' ')}…”`
+      return run({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) }, label)
     }
     if (!url) return setStatus('Paste some text, a link, or drop a file first.', true)
-    run({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) })
+    run(
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) },
+      url.replace(/^https?:\/\//, '').slice(0, 80),
+    )
   })
 
   $('text').addEventListener('keydown', e => {
@@ -337,7 +425,7 @@
   function sendFile(file) {
     const form = new FormData()
     form.append('file', file, file.name)
-    run({ method: 'POST', body: form })
+    run({ method: 'POST', body: form }, file.name)
   }
   $('choose').addEventListener('click', () => $('file').click())
   $('file').addEventListener('change', () => $('file').files[0] && sendFile($('file').files[0]))
@@ -363,6 +451,12 @@
     }
     setTimeout(() => { $('copy').textContent = 'Copy summary' }, 1500)
   })
+
+  $('clearrecent').addEventListener('click', () => {
+    try { localStorage.removeItem(HKEY) } catch { /* nothing to clear */ }
+    renderHistory()
+  })
+  renderHistory()
 </script>
 </body>
 </html>

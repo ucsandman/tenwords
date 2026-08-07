@@ -32,6 +32,8 @@ tenth of a cent.
 **On any webpage:** load `extension/` unpacked via `chrome://extensions`
 (Developer mode → Load unpacked). Then click the TenWords icon or press
 **Alt+T** on any article. Press again (or "restore original") to undo.
+To condense only part of a page, select the text and right-click →
+**Condense selection**.
 
 The extension has two modes. Out of the box it talks to the local
 service, so `launch.cmd` must be running. Or open the extension's
@@ -43,7 +45,8 @@ is sent only to `api.anthropic.com`.
 **On documents, URLs, and pasted text:** open http://localhost:4710 —
 paste a URL, drop a PDF/docx/txt, or paste raw text (a long Claude or
 ChatGPT answer, meeting notes, anything) into the text box and hit
-Condense (Ctrl+Enter works too).
+Condense (Ctrl+Enter works too). The last 20 condenses are kept in a
+Recent list (stored in this browser only) — click one to reopen it.
 
 ## How it works
 
