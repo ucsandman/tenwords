@@ -8,7 +8,13 @@ txt) into 10-word-per-paragraph summaries with a 10-word TL;DR.
 
 1. `npm install`
 2. Copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY`.
-3. `launch.cmd` (or `npm start`) — service runs on http://localhost:4710
+3. `launch.cmd` (or `npm start`) — service runs on http://localhost:4710.
+   If the service is already running, `launch.cmd` just opens the page.
+
+**Set-and-forget:** run `install-autostart.cmd` once and the service
+starts hidden at every Windows login — no console window, nothing to
+remember. `uninstall-autostart.cmd` removes the autostart and stops the
+service.
 
 The Chrome extension always talks to `http://localhost:4710` (hardcoded), so
 the service must run on that port for the extension to work. `PORT` in `.env`
