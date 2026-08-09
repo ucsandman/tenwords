@@ -49,6 +49,7 @@
 
     const blocks = els.map((el, i) => ({ id: `p${i}`, text: el.textContent.trim() }))
     const elById = new Map(els.map((el, i) => [`p${i}`, el]))
+    ensureStyle()
     toast(`TenWords: condensing 0/${blocks.length}…`, 0)
 
     let replaced = 0
@@ -64,6 +65,9 @@
             el.style.lineHeight = '1.9'
             el.style.marginTop = '1.6em'
             el.style.marginBottom = '1.6em'
+            el.style.paddingLeft = '1.6em'
+            el.style.textIndent = '-1.6em'
+            el.setAttribute('data-tenwords', '')
             replaced++
           }
           toast(`TenWords: condensing ${replaced}/${blocks.length}…`, 0)
@@ -91,6 +95,7 @@
   function restore() {
     for (const [el, orig] of st.originals) {
       el.innerHTML = orig.html
+      el.removeAttribute('data-tenwords')
       if (orig.style === null) el.removeAttribute('style')
       else el.setAttribute('style', orig.style)
     }
@@ -98,40 +103,94 @@
     st.banner?.remove()
     st.banner = null
     st.active = false
+    document.getElementById('__tenwords_style')?.remove()
+  }
+
+  function ensureStyle() {
+    if (document.getElementById('__tenwords_style')) return
+    const SERIF = "Charter,'Sitka Text',Cambria,Georgia,serif"
+    const style = document.createElement('style')
+    style.id = '__tenwords_style'
+    style.textContent = `
+      #__tenwords_banner {
+        position: fixed; top: 0; left: 0; right: 0; z-index: 2147483647;
+        display: flex; align-items: baseline; gap: 1.15em;
+        box-sizing: border-box; margin: 0; padding: 13px 26px 14px;
+        background: #fbfbfb; border-bottom: 1px solid #e2e2e2;
+        font: 17px/1.5 ${SERIF}; color: #1f1f1f; text-align: left;
+        animation: __tenwords_drop 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      #__tenwords_banner .__tw-label {
+        flex: none; font-size: 11px; font-style: normal; letter-spacing: 0.18em;
+        text-indent: 0.18em; text-transform: uppercase; white-space: nowrap; color: #595959;
+      }
+      #__tenwords_banner .__tw-tldr { flex: 1 1 auto; font-style: italic; text-wrap: balance; }
+      #__tenwords_banner button {
+        flex: none; margin: 0; padding: 0; border: 0; background: none; cursor: pointer;
+        font: 13px/1.5 ${SERIF}; letter-spacing: 0; text-transform: none; color: #595959;
+        text-decoration: underline; text-underline-offset: 3px;
+        transition: color 150ms ease-out;
+      }
+      #__tenwords_banner button:hover { color: #1f1f1f; }
+      #__tenwords_banner button:focus-visible { outline: 2px solid #9c2f26; outline-offset: 3px; }
+
+      #__tenwords_toast {
+        position: fixed; bottom: 24px; right: 24px; z-index: 2147483647;
+        box-sizing: border-box; margin: 0; padding: 9px 16px 10px;
+        background: #fbfbfb; border: 1px solid #e2e2e2; border-radius: 6px;
+        font: italic 14px/1.45 ${SERIF}; color: #1f1f1f;
+        font-variant-numeric: tabular-nums;
+        animation: __tenwords_rise 240ms ease-out both;
+      }
+
+      [data-tenwords][data-tenwords] { animation: __tenwords_fade 420ms ease-out both; }
+      [data-tenwords][data-tenwords]::before {
+        content: '\\00B6'; display: inline-block; width: 1.6em; text-indent: 0;
+        font: 1em/1 ${SERIF}; color: #9c2f26; opacity: 0.65;
+      }
+
+      @keyframes __tenwords_drop { from { transform: translateY(-100%); } to { transform: none; } }
+      @keyframes __tenwords_rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+      @keyframes __tenwords_fade { from { opacity: 0; } to { opacity: 1; } }
+
+      @media (prefers-reduced-motion: reduce) {
+        #__tenwords_banner, #__tenwords_toast, [data-tenwords][data-tenwords] { animation: none; }
+        #__tenwords_banner button { transition: none; }
+      }
+    `
+    document.documentElement.append(style)
   }
 
   function banner(tldr) {
+    ensureStyle()
     const div = document.createElement('div')
-    div.setAttribute('style', [
-      'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:2147483647',
-      'display:flex', 'align-items:center', 'gap:12px', 'box-sizing:border-box',
-      'padding:14px 18px', 'background:#1a1a1a', 'color:#faf8f4',
-      'font:italic 16px/1.5 Georgia,serif', 'box-shadow:0 2px 12px rgba(0,0,0,.35)',
-    ].join(';'))
+    div.id = '__tenwords_banner'
+    const label = document.createElement('span')
+    label.className = '__tw-label'
+    label.textContent = 'TL;DR'
     const text = document.createElement('span')
+    text.className = '__tw-tldr'
     text.textContent = tldr
-    text.style.flex = '1'
     const btn = document.createElement('button')
+    btn.type = 'button'
     btn.textContent = 'restore original'
-    btn.setAttribute('style', 'font:12px sans-serif;padding:6px 10px;cursor:pointer;background:#faf8f4;color:#1a1a1a;border:none;border-radius:4px')
     btn.addEventListener('click', restore)
-    div.append(text, btn)
+    div.append(label, text, btn)
     document.body.prepend(div)
     st.banner = div
   }
 
   function toast(msg, ms = 4000) {
-    clearToast()
-    const div = document.createElement('div')
-    div.id = '__tenwords_toast'
+    let div = document.getElementById('__tenwords_toast')
+    if (!div) {
+      ensureStyle()
+      div = document.createElement('div')
+      div.id = '__tenwords_toast'
+      document.body.appendChild(div)
+    }
+    clearTimeout(div.__tenwordsTimer)
     div.textContent = msg
-    div.setAttribute('style', [
-      'position:fixed', 'bottom:24px', 'right:24px', 'z-index:2147483647',
-      'padding:10px 16px', 'background:#1a1a1a', 'color:#faf8f4',
-      'font:13px sans-serif', 'border-radius:6px', 'box-shadow:0 2px 12px rgba(0,0,0,.3)',
-    ].join(';'))
-    document.body.appendChild(div)
-    if (ms > 0) setTimeout(() => div.remove(), ms)
+    if (ms > 0) div.__tenwordsTimer = setTimeout(() => div.remove(), ms)
   }
 
   function clearToast() {
