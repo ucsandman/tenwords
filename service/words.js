@@ -17,7 +17,11 @@ const CONNECTORS = new Set([
 export function endsOnConnector(text) {
   const words = text.trim().toLowerCase().split(/\s+/).filter(Boolean)
   if (!words.length) return false
-  return CONNECTORS.has(words[words.length - 1].replace(/[.,;:!?]+$/, ''))
+  const last = words[words.length - 1].replace(/[.,;:!?]+$/, '')
+  // A final possessive ("...and the philosopher's") almost always dangles;
+  // the rare valid absolute possessive just costs one retry.
+  if (/['’]s$|s['’]$/.test(last)) return true
+  return CONNECTORS.has(last)
 }
 
 export function parseJson(text) {

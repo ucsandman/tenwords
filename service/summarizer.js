@@ -8,7 +8,7 @@ const CONCURRENCY = 4
 const RULES = `Rules:
 - Each "words" array has EXACTLY 10 items — one word per item. Not 9, not 11.
 - The 10 words must read as one complete, natural sentence that stands alone — never a sentence that trails off or gets cut short.
-- Never end on a connector word ("and", "with", "the", "to"); the last word must complete the thought.
+- Never end on a connector word ("and", "with", "the", "to") or a dangling possessive ("the author's"); the last word must complete the thought.
 - Use plain, everyday vocabulary. No jargon, no fancy words.
 - Keep the main point. Drop filler, hedging, and repetition.
 - A hyphenated word is one item.
@@ -36,7 +36,7 @@ const isBad = t => countWords(t) !== 10 || endsOnConnector(t)
 function rejectionReason(text) {
   return countWords(text) !== 10
     ? `${countWords(text)} words instead of 10`
-    : 'ends on a connector word, so the sentence is incomplete'
+    : 'ends on a connector word or dangling possessive, so the sentence is incomplete'
 }
 
 async function call(client, prompt) {

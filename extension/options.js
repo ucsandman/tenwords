@@ -105,7 +105,7 @@ async function init() {
   showProvider(saved.provider, saved)
   setStatus(saved.apiKey
     ? `Key saved (…${saved.apiKey.slice(-4)}) — calling ${PROVIDERS[saved.provider].label} directly.`
-    : 'No key — using the local service.')
+    : 'No key saved yet; condensing uses the local service.')
 }
 
 init()

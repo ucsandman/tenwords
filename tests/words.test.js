@@ -10,6 +10,12 @@ test('endsOnConnector flags trailing connectors, ignoring punctuation and case',
   assert.equal(endsOnConnector(''), false)
 })
 
+test('endsOnConnector flags dangling possessives at the end', () => {
+  assert.equal(endsOnConnector('Republic explores justice, the state, and the philosopher’s'), true)
+  assert.equal(endsOnConnector("the report covers all the workers' "), true)
+  assert.equal(endsOnConnector('the decision belongs to the readers'), false)
+})
+
 test('countWords counts whitespace-separated tokens', () => {
   assert.equal(countWords('one two three'), 3)
   assert.equal(countWords('  spaced   out  '), 2)
