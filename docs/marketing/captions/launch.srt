@@ -1,0 +1,27 @@
+1
+00:00:00,400 --> 00:00:01,500
+TenWords.
+
+2
+00:00:05,400 --> 00:00:11,200
+Another ten thousand word read you will never finish. Then the page collapses. Ten words per paragraph.
+
+3
+00:00:11,600 --> 00:00:26,467
+Press alt T on any article. TenWords reads every paragraph first, then the whole page folds at once. Ten words each, with a red pilcrow where the paragraph used to be, and a ten word summary of the whole article pinned to the top.
+
+4
+00:00:43,800 --> 00:00:49,400
+The ten word guarantee is enforced in code. It counts every word, so you never have to check its work.
+
+5
+00:00:49,800 --> 00:00:55,400
+Your key stays in your browser. No middle server, no analytics. A long article costs about a tenth of a cent.
+
+6
+00:00:55,800 --> 00:01:01,400
+Because the page collapses in place, restore is one click. The original page comes right back.
+
+7
+00:01:01,800 --> 00:01:06,400
+TenWords. Condense any article, restore with one click. Your reading pile, back under control. tenwords dot io.

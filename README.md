@@ -6,6 +6,8 @@ txt) into 10-word-per-paragraph summaries with a 10-word TL;DR.
 
 Site: https://tenwords.io · [Chrome Web Store](https://chromewebstore.google.com/detail/mhniadnpdakfejanehmhnabhakhhbcdl)
 
+![TenWords condensing an article](docs/marketing/readme.gif)
+
 ## Setup
 
 1. `npm install`

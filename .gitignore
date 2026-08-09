@@ -4,3 +4,4 @@ node_modules/
 .offlocal/
 .superpowers/
 dist/
+docs/marketing/*.mp4
