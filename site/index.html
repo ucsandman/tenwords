@@ -16,163 +16,318 @@
     color-scheme: light dark;
     --bg: #fbfbfb; --surface: #ffffff; --ink: #1f1f1f;
     --muted: #595959; --line: #e2e2e2; --accent: #9c2f26;
+    --fold: 700ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #1b1b1b; --surface: #212121; --ink: #e8e8e8; --muted: #a8a8a8; --line: #3a3a3a; --accent: #e08a7e; }
   }
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
-    margin: 0; padding: 4.5rem 1.25rem 5rem;
+    margin: 0; padding: 0 1.25rem 5rem;
     font-family: Charter, 'Sitka Text', Cambria, Georgia, serif;
-    font-size: 1.0625rem; line-height: 1.65;
     background: var(--bg); color: var(--ink);
-    display: flex; flex-direction: column; align-items: center;
   }
-  main { width: 100%; max-width: 42rem; }
-  header { text-align: center; margin-bottom: 3.5rem; }
-  h1 { margin: 0; font-size: 1.6rem; font-weight: 400; letter-spacing: 0.32em; text-transform: uppercase; text-indent: 0.32em; }
-  h1 span { color: var(--muted); }
-  .tag { margin: 0.6rem 0 0; font-size: 1.125rem; font-style: italic; color: var(--muted); }
-  .lede { margin: 1.4rem auto 0; max-width: 36rem; text-wrap: pretty; }
+  main { max-width: 42rem; margin: 0 auto; }
 
-  .demo {
-    border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
-    padding: 1.6rem 1.8rem; margin: 0 0 1rem;
+  /* ---------- the banner (drops in when condensing starts) ---------- */
+  #banner {
+    position: sticky; top: 0; z-index: 10;
+    margin: 0 -1.25rem; padding: 0.85rem 1.25rem;
+    background: var(--bg); border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; gap: 0.8em;
+    transform: translateY(-110%);
+    transition: transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .demo .pair { margin: 0 0 1.4rem; }
-  .demo .pair:last-child { margin-bottom: 0; }
-  .demo .orig {
-    display: block; font-size: 0.9375rem; color: var(--muted); line-height: 1.55;
-    max-height: 6.5em; overflow: hidden; opacity: 1;
-    transition: max-height 700ms cubic-bezier(0.22, 1, 0.36, 1), opacity 500ms ease-out, margin 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  body.loud #banner { visibility: hidden; }
+  body.condensing #banner, body.calm #banner { transform: translateY(0); }
+  #banner .lbl {
+    font-family: Consolas, monospace; font-size: 0.7rem; letter-spacing: 0.2em;
+    color: var(--muted); flex: none;
   }
-  .demo .ten {
-    display: block; font-size: 1.0625rem; line-height: 1.6;
-    max-height: 0; overflow: hidden; opacity: 0;
-    transition: max-height 700ms cubic-bezier(0.22, 1, 0.36, 1), opacity 500ms 200ms ease-out;
-  }
-  .demo .ten::before { content: '¶'; margin-right: 0.55em; color: var(--accent); opacity: 0.65; }
-  .demo.done .orig { max-height: 0; opacity: 0; margin: 0; }
-  .demo.done .ten { max-height: 4em; opacity: 1; }
-  .demo .pair.d1 .orig, .demo .pair.d1 .ten { transition-delay: 150ms; }
-  .demo .pair.d2 .orig, .demo .pair.d2 .ten { transition-delay: 300ms; }
-  .demobar { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 3rem; }
-  .demobar .cap { font-size: 0.875rem; color: var(--muted); font-style: italic; }
-  #replay {
-    border: 0; background: none; cursor: pointer;
+  #banner .tldr { font-style: italic; font-size: 1rem; margin: 0; flex: 1; min-width: 0; }
+  #banner .tldr .w { opacity: 0; transition: opacity 300ms ease-out; }
+  body.calm #banner .tldr .w, body.condensing #banner .tldr .w.on { opacity: 1; }
+  #restore {
+    flex: none; border: 0; background: none; cursor: pointer; padding: 0;
     font: inherit; font-size: 0.875rem; color: var(--muted);
     text-decoration: underline; text-underline-offset: 3px;
   }
-  #replay:hover { color: var(--ink); }
-  @media (prefers-reduced-motion: reduce) {
-    .demo .orig, .demo .ten { transition: none; }
+  #restore:hover { color: var(--ink); }
+  #restore:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  body.loud #restore { visibility: hidden; }
+
+  /* ---------- loud state ---------- */
+  body.loud { padding-top: 2.2rem; }
+  body.loud main { max-width: 46rem; }
+  .orig {
+    font-size: 0.9688rem; line-height: 1.42; color: var(--ink);
+    margin: 0 0 0.9rem; max-height: 30em; opacity: 1;
+    overflow: hidden;
+    transition: max-height var(--fold), opacity 500ms ease-out, margin var(--fold);
   }
+  body.loud .orig { color: var(--ink); }
 
-  h2 { margin: 3rem 0 1rem; font-size: 0.875rem; font-weight: 400; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
-  ol.steps { margin: 0; padding-left: 1.2rem; }
-  ol.steps li { margin: 0.6rem 0; }
-  ul.facts { margin: 0; padding-left: 1.2rem; }
-  ul.facts li { margin: 0.55rem 0; }
+  /* ---------- the ten-word lines ---------- */
+  .ten {
+    display: block; overflow: hidden;
+    max-height: 0; opacity: 0; margin: 0;
+    font-weight: 400; font-size: 1.0625rem; line-height: 1.6;
+    transition: max-height var(--fold), opacity 500ms 180ms ease-out, margin var(--fold);
+  }
+  .ten::before { content: '¶'; margin-right: 0.55em; color: var(--accent); opacity: 0.65; }
+  .folded .orig { max-height: 0; opacity: 0; margin: 0; }
+  .folded .ten { max-height: 6em; opacity: 1; }
 
-  .cta { margin: 3.5rem 0 0; text-align: center; }
+  /* ---------- calm state ---------- */
+  .detail { display: none; }
+  body.calm .detail { display: block; }
+  body.calm section { margin-bottom: 2.6rem; }
+  body.calm .hero .ten {
+    font-size: 1.55rem; line-height: 1.45; margin: 3rem 0 0.6rem; text-wrap: pretty;
+  }
+  body.calm .hero .ten::before { opacity: 1; }
+  .detail { color: var(--muted); font-size: 0.9688rem; line-height: 1.6; margin-top: 0.5rem; }
+  .detail p { margin: 0.45rem 0; }
+  .detail kbd {
+    font-family: Consolas, monospace; font-size: 0.85em;
+    border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px;
+    padding: 0.05em 0.4em; background: var(--surface);
+  }
+  .detail a { color: inherit; text-underline-offset: 3px; }
+  .detail a:hover { color: var(--ink); }
+
+  body.calm section.grouped { margin-bottom: 1.5rem; }
+  body.calm section.grouped .ten { font-size: 1.0625rem; margin: 0.55rem 0; }
+  body.calm .cluster-cap {
+    display: block; margin: 2.6rem 0 0.8rem;
+    font-size: 0.875rem; font-weight: 400; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .cluster-cap { display: none; }
+
+  /* film */
+  #film { display: none; margin: 0.8rem 0 0; }
+  body.calm #film { display: block; }
+  #film video {
+    width: 100%; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--surface); display: block;
+  }
+  #film .cap { font-size: 0.875rem; font-style: italic; color: var(--muted); margin-top: 0.5rem; }
+
+  /* CTA */
+  .cta { display: none; text-align: center; margin: 3.4rem 0 0; }
+  body.calm .cta { display: block; }
   .cta .store {
     display: inline-block; padding: 0.75rem 1.8rem;
     border: 1px solid var(--ink); border-radius: 6px;
-    background: var(--ink); color: var(--bg); text-decoration: none;
-    font-size: 1rem;
+    background: var(--ink); color: var(--bg); text-decoration: none; font-size: 1rem;
   }
-  details { margin: 1.6rem auto 0; max-width: 34rem; text-align: left; }
-  summary { cursor: pointer; color: var(--muted); }
-  details code { font-family: Consolas, monospace; font-size: 0.875em; }
+  .cta .store:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .cta details { margin: 1.6rem auto 0; max-width: 34rem; text-align: left; }
+  .cta summary { cursor: pointer; color: var(--muted); }
+  .cta code { font-family: Consolas, monospace; font-size: 0.875em; }
+  .cta ol { margin: 0.6rem 0 0; padding-left: 1.2rem; color: var(--muted); }
+  .cta li { margin: 0.5rem 0; }
 
-  footer { margin-top: 4.5rem; padding-top: 1.6rem; border-top: 1px solid var(--line); text-align: center; font-size: 0.875rem; color: var(--muted); }
-  footer a { color: inherit; }
-  a { color: inherit; text-underline-offset: 3px; }
+  /* the ¶ trigger button, visible only while loud */
+  #condense {
+    position: fixed; right: 1.4rem; bottom: 1.4rem; z-index: 20;
+    width: 3.2rem; height: 3.2rem; border-radius: 50%;
+    border: 1px solid var(--accent); background: var(--bg); color: var(--accent);
+    font-family: Georgia, serif; font-size: 1.5rem; line-height: 1;
+    cursor: pointer; box-shadow: none;
+    transition: opacity 300ms ease-out, transform 300ms ease-out;
+  }
+  #condense:hover { background: var(--accent); color: var(--bg); }
+  #condense:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  body.condensing #condense, body.calm #condense { opacity: 0; pointer-events: none; transform: scale(0.8); }
+
+  footer {
+    display: none; margin-top: 4.5rem; padding-top: 1.6rem;
+    border-top: 1px solid var(--line); text-align: center;
+    font-size: 0.875rem; color: var(--muted);
+  }
+  body.calm footer { display: block; }
+  footer a { color: inherit; text-underline-offset: 3px; }
+
+  /* reduced motion: everything is instant */
+  @media (prefers-reduced-motion: reduce) {
+    .orig, .ten, #banner, #condense { transition: none; }
+    #banner .tldr .w { transition: none; }
+    html { scroll-behavior: auto; }
+  }
 </style>
 </head>
-<body>
+<body class="loud">
+
+<div id="banner" aria-live="polite">
+  <span class="lbl">TL;DR</span>
+  <p class="tldr" id="tldr"></p>
+  <button id="restore">restore original</button>
+</div>
+
 <main>
-  <header>
-    <h1>Ten<span>Words</span></h1>
-    <p class="tag">Every paragraph in exactly ten words.</p>
-    <p class="lede">A Chrome extension that rewrites any article, PDF, or wall of
-    AI output into ten-word lines you can actually skim. Not a summary panel
-    bolted next to the page: the page itself collapses, paragraph by
-    paragraph, and restores with one click.</p>
-  </header>
-
-  <div class="demo" id="demo" aria-label="Demo: three paragraphs collapsing to ten words each">
-    <div class="pair">
-      <span class="orig">The quarterly infrastructure review found that the primary database cluster has been running close to its connection limit during weekday peaks, and the team agreed to introduce connection pooling at the service layer before adding any new read-heavy features to the platform.</span>
-      <span class="ten">Database cluster hits connection limits during peak weekday hours regularly</span>
+  <section class="hero">
+    <p class="orig">TenWords is a Chrome extension built around one small, stubborn idea: most of what you are asked to read every day is far longer than what it actually says. Articles are padded to hit word counts, documentation restates itself paragraph after paragraph, and AI assistants answer simple questions with walls of text nobody asked for. TenWords takes the page you are already on and rewrites it in place, so that every single paragraph becomes exactly ten words long, with a ten-word summary of the whole page pinned to the top. It is not a summary panel bolted to the side of your window. The page itself collapses, paragraph by paragraph, into something you can actually skim.</p>
+    <h1 class="ten" data-ten>TenWords rewrites the page into exactly ten words per paragraph</h1>
+    <div class="detail">
+      <p>Not a sidebar. The page itself, condensed in place — like the one you are reading now.</p>
     </div>
-    <div class="pair d1">
-      <span class="orig">Meanwhile the mobile team shipped the offline sync rewrite, which cuts cold-start time nearly in half and removes the last dependency on the legacy storage layer that has caused most of the crash reports over the past two quarters.</span>
-      <span class="ten">Mobile team rewrites offline sync and fixes crash problems significantly</span>
+  </section>
+
+  <span class="cluster-cap">How it works</span>
+
+  <section class="grouped">
+    <p class="orig">Using it takes one keystroke. On any article, any documentation page, any interminable blog post, you press Alt and T together, or click the small pilcrow icon in your toolbar if you prefer the mouse. The extension gathers up the paragraphs on the page, sends them off in parallel batches, and as each batch of summaries comes back the paragraphs fold down one after another, right where they stand, while a ten-word summary of the entire page settles in at the top. A long article finishes in well under a minute; you watch the page get shorter while you wait.</p>
+    <h2 class="ten" data-ten>Press Alt+T on any article and paragraphs collapse in place</h2>
+    <div class="detail"><p>Or click the ¶ toolbar icon. Batches stream in, so long pages shorten while you watch. Press <kbd>Alt</kbd>+<kbd>T</kbd> here to see it again.</p></div>
+  </section>
+
+  <section class="grouped">
+    <p class="orig">Sometimes the whole page is not the problem; the problem is one enormous quoted email, one sprawling comment, one section of a spec you need the gist of before a meeting that started two minutes ago. For that, you do not need to condense everything. Select the offending text with your mouse the way you would to copy it, right-click it, and choose Condense selection from the menu. Only the paragraphs inside your selection fold down to their ten-word lines; the rest of the page stays exactly as it was, untouched.</p>
+    <h2 class="ten" data-ten>Select any part of a page, right-click, condense the selection</h2>
+    <div class="detail"><p>Only what you selected folds. Everything else stays untouched.</p></div>
+  </section>
+
+  <section class="grouped">
+    <p class="orig">Nothing is destroyed, and nothing needs to be undone carefully. The original text of every paragraph is kept, byte for byte, from the moment you condense. When you want the full page back, you press the same shortcut again, or click restore original in the banner at the top, and every paragraph unfolds back into precisely the text that was there before, in the same place, with your scroll position intact. Condensing is a way of looking at a page, not a change made to it.</p>
+    <h2 class="ten" data-ten>One click restores the original page exactly as it was</h2>
+    <div class="detail"><p>Try it — the restore link above brings the loud version of this page back.</p></div>
+  </section>
+
+  <span class="cluster-cap">The guarantee</span>
+
+  <section>
+    <p class="orig">Every tool built on a language model makes a quiet bet about trust, and most of them lose it the first time the model does something confidently wrong. TenWords does not trust the model to count. Every summary that comes back has its words counted in ordinary code. A summary with nine words, or eleven, or one that trails off mid-thought, is sent back with the reason it failed and rewritten. If the second attempt is still wrong, the line is repaired deterministically, in code, so that what reaches your screen is exactly ten words, every time, whether the model cooperated or not.</p>
+    <h2 class="ten" data-ten>Counts are checked in code; the model is never trusted</h2>
+    <div class="detail">
+      <p>Wrong counts are retried with the reason they failed. Anything still off is fixed deterministically. The number ten is literal, always.</p>
     </div>
-    <div class="pair d2">
-      <span class="orig">Finally, hiring remains the main constraint for the platform group, with two backend positions open since March, so the leads proposed pausing one of the lower-priority migration projects until at least one of those roles is filled.</span>
-      <span class="ten">Two open backend positions block progress on other platform projects</span>
+  </section>
+
+  <section>
+    <p class="orig">Speed matters, because the whole point is getting time back. Paragraphs are sent in batches of forty, up to four batches in flight at once, and summaries stream onto the page as each batch lands rather than waiting for the slowest one. In practice a ten-thousand-word article, the kind that fills twelve screens of scrolling, condenses in about thirty seconds, and the cost of the underlying model calls comes to roughly a tenth of a cent, billed to your own key, visible on your own usage page.</p>
+    <h2 class="ten" data-ten>A ten-thousand-word article condenses in about thirty seconds, streamed live</h2>
+    <div class="detail"><p>Batches of forty paragraphs, four in flight. With the default model, a long article costs about a tenth of a cent.</p></div>
+  </section>
+
+  <span class="cluster-cap">The film</span>
+
+  <section>
+    <p class="orig">Here is the launch film, ninety seconds of the extension doing this to a real Wikipedia article with the sound of a quiet piano behind it. The article condenses on camera, unedited, from its full length down to ten-word lines, and then restores itself at the end. Every summary you will see in the frame was produced live by the extension during the recording, counted and enforced the same way it will be on your own pages.</p>
+    <h2 class="ten" data-ten>Watch the launch film: one real article, folded and restored</h2>
+    <div id="film" class="detail">
+      <video controls preload="none" poster="thumb-16x9.jpg" src="launch.mp4"></video>
+      <p class="cap">Real output, unedited. Every line is exactly ten words.</p>
     </div>
-  </div>
-  <div class="demobar">
-    <span class="cap">Real output, unedited. Every line is exactly ten words.</span>
-    <button type="button" id="replay">Replay</button>
-  </div>
+  </section>
 
-  <h2>How it works</h2>
-  <ol class="steps">
-    <li>Install the extension and paste your Anthropic API key in its
-    options. Your key stays in your browser; a long article costs about a
-    tenth of a cent (Claude Haiku).</li>
-    <li>Press <strong>Alt+T</strong> on any page, or select text and
-    right-click → Condense selection.</li>
-    <li>Paragraphs collapse in place as batches finish, with a ten-word
-    TL;DR pinned on top. Press again to restore the original.</li>
-  </ol>
+  <span class="cluster-cap">Privacy</span>
 
-  <h2>The guarantee</h2>
-  <ul class="facts">
-    <li>Exactly ten words per paragraph, always: word counts are enforced in
-    code, with a corrective retry and a deterministic fix. The model is never
-    trusted.</li>
-    <li>Fast on real documents: a 10,000-word article condenses in about
-    30 seconds, streamed in parallel batches of forty paragraphs.</li>
-    <li>Works beyond the browser: a small local service adds a paste-anything
-    web page plus PDF, docx, txt, and URL condensing.</li>
-  </ul>
+  <section>
+    <p class="orig">There is no account to create and no server of ours in the middle, because there is nothing we want to know about your reading. You bring your own key from whichever model provider you already trust: Anthropic, OpenAI, DeepSeek, Kimi, or any OpenAI-compatible endpoint, including one running on your own machine. You paste it into the extension's options page exactly once, and it stays in your browser profile from then on. The text of the pages you condense travels to that provider to be summarized and comes straight back; it is not logged, collected, or seen by anyone else, and there are no analytics of any kind in the extension. What you read is your business.</p>
+    <h2 class="ten" data-ten>Your key stays in your browser; no analytics, no middleman</h2>
+    <div class="detail">
+      <p>Bring a key from Anthropic, OpenAI, DeepSeek, Kimi, or any OpenAI-compatible endpoint — even one on your own machine. Paste it once; page text goes only to the provider you chose. Details in the <a href="/privacy.html">privacy policy</a>.</p>
+    </div>
+  </section>
 
-  <h2>Privacy</h2>
-  <p>There is no server of ours in the middle and no analytics. Your key
-  lives in your browser profile, and page text goes only to Anthropic to be
-  condensed. Details: <a href="/privacy.html">privacy policy</a>.</p>
+  <span class="cluster-cap">Install</span>
 
-  <div class="cta">
-    <a class="store" href="https://chromewebstore.google.com/detail/mhniadnpdakfejanehmhnabhakhhbcdl">Chrome Web Store</a>
-    <details>
-      <summary>Install from source</summary>
-      <ol class="steps">
-        <li>Download the extension from the repository and unzip it.</li>
-        <li>Open <code>chrome://extensions</code>, enable Developer mode, click
-        <strong>Load unpacked</strong>, and pick the <code>extension</code> folder.</li>
-        <li>Right-click the ¶ icon → Options → paste your Anthropic API key.</li>
-      </ol>
-    </details>
-  </div>
+  <section>
+    <p class="orig">If any part of this page made you think of a specific article, a specific newsletter, or a specific colleague's emails, that instinct is the entire product. TenWords is in the Chrome Web Store and takes about a minute to set up: install it, open its options, pick your provider, paste your key, and press Alt and T on the longest thing you can find. From then on, every unbearable page on the internet is one keystroke away from being ten words per paragraph.</p>
+    <h2 class="ten" data-ten>Install TenWords from the Chrome Web Store and start condensing</h2>
+    <div class="cta detail">
+      <a class="store" href="https://chromewebstore.google.com/detail/mhniadnpdakfejanehmhnabhakhhbcdl">Chrome Web Store</a>
+    </div>
+  </section>
 </main>
-<footer>
-  TenWords · <a href="/privacy.html">Privacy</a>
-</footer>
+
+<button id="condense" aria-label="Condense this page">¶</button>
+
+<footer>TenWords · <a href="/privacy.html">Privacy</a> · <a href="https://github.com/ucsandman/tenwords">GitHub</a></footer>
+
 <script>
-  const demo = document.getElementById('demo')
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
-  function play() {
-    demo.classList.remove('done')
-    if (reduced) { demo.classList.add('done'); return }
-    setTimeout(() => demo.classList.add('done'), 1400)
+(function () {
+  const body = document.body;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const sections = Array.from(document.querySelectorAll('main section'));
+  const tldrText = 'Every paragraph becomes exactly ten words. The page just collapsed.';
+  const tldrEl = document.getElementById('tldr');
+  tldrEl.innerHTML = tldrText.split(' ').map(w => '<span class="w">' + w + '</span>').join(' ');
+  const tldrWords = Array.from(tldrEl.querySelectorAll('.w'));
+
+  let timers = [];
+  let autoTimer = null;
+  const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+
+  function condense(instant) {
+    if (!body.classList.contains('loud')) return;
+    clearTimeout(autoTimer);
+    if (instant || reduced) {
+      body.classList.remove('loud');
+      sections.forEach(s => s.classList.add('folded'));
+      body.classList.add('calm');
+      return;
+    }
+    body.classList.remove('loud');
+    body.classList.add('condensing');
+    // words of the TL;DR light up across the run
+    const total = 350 + sections.length * 120 + 700;
+    tldrWords.forEach((w, i) => {
+      timers.push(setTimeout(() => w.classList.add('on'), 350 + (total - 350) * (i / tldrWords.length)));
+    });
+    sections.forEach((s, i) => {
+      timers.push(setTimeout(() => s.classList.add('folded'), 350 + i * 120));
+    });
+    timers.push(setTimeout(() => {
+      body.classList.remove('condensing');
+      body.classList.add('calm');
+    }, total + 500));
   }
-  document.getElementById('replay').addEventListener('click', play)
-  play()
+
+  function restore() {
+    if (body.classList.contains('loud')) return;
+    clearTimers();
+    body.classList.remove('condensing', 'calm');
+    sections.forEach(s => s.classList.remove('folded'));
+    body.classList.add('loud');
+    scrollTo({top: 0, behavior: 'auto'});
+    scheduleAuto(6000); // linger longer on an explicit restore
+  }
+
+  function skipToCalm() {
+    if (!body.classList.contains('condensing')) return;
+    clearTimers();
+    sections.forEach(s => s.classList.add('folded'));
+    tldrWords.forEach(w => w.classList.add('on'));
+    body.classList.remove('condensing');
+    body.classList.add('calm');
+  }
+
+  function scheduleAuto(ms) {
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(() => condense(false), ms);
+  }
+
+  document.getElementById('condense').addEventListener('click', () => condense(false));
+  document.getElementById('restore').addEventListener('click', restore);
+  addEventListener('keydown', (e) => {
+    if (e.altKey && (e.key === 't' || e.key === 'T')) { e.preventDefault();
+      body.classList.contains('loud') ? condense(false) : restore();
+    }
+    if (body.classList.contains('condensing') && (e.key === 'Escape' || e.key === ' ')) skipToCalm();
+  });
+  addEventListener('wheel', skipToCalm, {passive: true});
+  addEventListener('touchmove', skipToCalm, {passive: true});
+
+  if (reduced) {
+    condense(true);
+  } else {
+    scheduleAuto(1500);
+  }
+})();
 </script>
 </body>
 </html>

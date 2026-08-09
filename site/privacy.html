@@ -26,15 +26,17 @@
 <body>
 <main>
   <h1>TenWords privacy</h1>
-  <p>Last updated: August 6, 2026.</p>
+  <p>Last updated: August 9, 2026.</p>
 
   <h2>What TenWords does with your data</h2>
   <p>When you condense a page, the text of that page's paragraphs is sent to
   one of two places, depending on how you configured the extension: directly
-  to Anthropic's API (if you saved an API key in the extension options), or
-  to a TenWords service running on your own machine at localhost:4710. In
-  both cases the text is sent only to produce the summaries, and TenWords
-  keeps no copy.</p>
+  to the AI provider you chose in the extension options (Anthropic, OpenAI,
+  DeepSeek, Kimi, or a custom OpenAI-compatible endpoint you specify,
+  including one on your own machine), or to a TenWords service running on
+  your own machine at localhost:4710. In both cases the text is sent only to
+  produce the summaries, and TenWords keeps no copy. Your chosen provider
+  handles that text under its own privacy terms.</p>
 
   <h2>What we collect</h2>
   <p>Nothing. TenWords has no servers, no accounts, no analytics, no
@@ -42,11 +44,11 @@
   or your summaries.</p>
 
   <h2>Your API key</h2>
-  <p>The Anthropic API key you save in the options page is stored with
+  <p>The API key you save in the options page is stored with
   <code>chrome.storage.local</code> in your browser profile on your machine.
-  It is never synced, and it is sent only to api.anthropic.com as the
-  authentication header on summarization requests. Removing the key in the
-  options page deletes it.</p>
+  It is never synced, and it is sent only to the provider you selected, as
+  the authentication header on summarization requests. Removing the key in
+  the options page deletes it.</p>
 
   <h2>Third parties</h2>
   <p>Text you condense in direct mode is processed by Anthropic under their
