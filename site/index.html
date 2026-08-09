@@ -172,7 +172,7 @@
     <p class="orig">TenWords is a Chrome extension built around one small, stubborn idea: most of what you are asked to read every day is far longer than what it actually says. Articles are padded to hit word counts, documentation restates itself paragraph after paragraph, and AI assistants answer simple questions with walls of text nobody asked for. TenWords takes the page you are already on and rewrites it in place, so that every single paragraph becomes exactly ten words long, with a ten-word summary of the whole page pinned to the top. It is not a summary panel bolted to the side of your window. The page itself collapses, paragraph by paragraph, into something you can actually skim.</p>
     <h1 class="ten" data-ten>TenWords rewrites the page into exactly ten words per paragraph</h1>
     <div class="detail">
-      <p>Not a sidebar. The page itself, condensed in place — like the one you are reading now.</p>
+      <p data-ten>Not a panel beside the page: this page, condensed itself.</p>
     </div>
   </section>
 
@@ -181,19 +181,19 @@
   <section class="grouped">
     <p class="orig">Using it takes one keystroke. On any article, any documentation page, any interminable blog post, you press Alt and T together, or click the small pilcrow icon in your toolbar if you prefer the mouse. The extension gathers up the paragraphs on the page, sends them off in parallel batches, and as each batch of summaries comes back the paragraphs fold down one after another, right where they stand, while a ten-word summary of the entire page settles in at the top. A long article finishes in well under a minute; you watch the page get shorter while you wait.</p>
     <h2 class="ten" data-ten>Press Alt+T on any article and paragraphs collapse in place</h2>
-    <div class="detail"><p>Or click the ¶ toolbar icon. Batches stream in, so long pages shorten while you watch. Press <kbd>Alt</kbd>+<kbd>T</kbd> here to see it again.</p></div>
+    <div class="detail"><p data-ten>Or click the toolbar pilcrow; batches stream in while watching.</p><p data-ten>Press <kbd>Alt</kbd> plus <kbd>T</kbd> right here to see it again.</p></div>
   </section>
 
   <section class="grouped">
     <p class="orig">Sometimes the whole page is not the problem; the problem is one enormous quoted email, one sprawling comment, one section of a spec you need the gist of before a meeting that started two minutes ago. For that, you do not need to condense everything. Select the offending text with your mouse the way you would to copy it, right-click it, and choose Condense selection from the menu. Only the paragraphs inside your selection fold down to their ten-word lines; the rest of the page stays exactly as it was, untouched.</p>
     <h2 class="ten" data-ten>Select any part of a page, right-click, condense the selection</h2>
-    <div class="detail"><p>Only what you selected folds. Everything else stays untouched.</p></div>
+    <div class="detail"><p data-ten>Only the paragraphs you selected fold; everything else stays untouched.</p></div>
   </section>
 
   <section class="grouped">
     <p class="orig">Nothing is destroyed, and nothing needs to be undone carefully. The original text of every paragraph is kept, byte for byte, from the moment you condense. When you want the full page back, you press the same shortcut again, or click restore original in the banner at the top, and every paragraph unfolds back into precisely the text that was there before, in the same place, with your scroll position intact. Condensing is a way of looking at a page, not a change made to it.</p>
     <h2 class="ten" data-ten>One click restores the original page exactly as it was</h2>
-    <div class="detail"><p>Try it — the restore link above brings the loud version of this page back.</p></div>
+    <div class="detail"><p data-ten>Try it: the restore link above brings everything right back.</p></div>
   </section>
 
   <span class="cluster-cap">The guarantee</span>
@@ -202,14 +202,15 @@
     <p class="orig">Every tool built on a language model makes a quiet bet about trust, and most of them lose it the first time the model does something confidently wrong. TenWords does not trust the model to count. Every summary that comes back has its words counted in ordinary code. A summary with nine words, or eleven, or one that trails off mid-thought, is sent back with the reason it failed and rewritten. If the second attempt is still wrong, the line is repaired deterministically, in code, so that what reaches your screen is exactly ten words, every time, whether the model cooperated or not.</p>
     <h2 class="ten" data-ten>Counts are checked in code; the model is never trusted</h2>
     <div class="detail">
-      <p>Wrong counts are retried with the reason they failed. Anything still off is fixed deterministically. The number ten is literal, always.</p>
+      <p data-ten>Wrong counts are retried with the reason that they failed.</p>
+      <p data-ten>Anything still off gets fixed deterministically; ten is always literal.</p>
     </div>
   </section>
 
   <section>
     <p class="orig">Speed matters, because the whole point is getting time back. Paragraphs are sent in batches of forty, up to four batches in flight at once, and summaries stream onto the page as each batch lands rather than waiting for the slowest one. In practice a ten-thousand-word article, the kind that fills twelve screens of scrolling, condenses in about thirty seconds, and the cost of the underlying model calls comes to roughly a tenth of a cent, billed to your own key, visible on your own usage page.</p>
     <h2 class="ten" data-ten>A ten-thousand-word article condenses in about thirty seconds, streamed live</h2>
-    <div class="detail"><p>Batches of forty paragraphs, four in flight. With the default model, a long article costs about a tenth of a cent.</p></div>
+    <div class="detail"><p data-ten>Forty paragraphs per batch stream in, up to four parallel.</p><p data-ten>With default models a long article costs under a cent.</p></div>
   </section>
 
   <span class="cluster-cap">The film</span>
@@ -219,7 +220,8 @@
     <h2 class="ten" data-ten>Watch the launch film: one real article, folded and restored</h2>
     <div id="film" class="detail">
       <video controls preload="none" poster="thumb-16x9.jpg" src="launch.mp4"></video>
-      <p class="cap">Real output, unedited. Every line is exactly ten words.</p>
+      <p class="cap" data-ten>Filmed live on a real article, unedited, no second takes.</p>
+      <p class="cap" data-ten>Every line in this film is exactly ten words long.</p>
     </div>
   </section>
 
@@ -229,7 +231,10 @@
     <p class="orig">There is no account to create and no server of ours in the middle, because there is nothing we want to know about your reading. You bring your own key from whichever model provider you already trust: Anthropic, OpenAI, DeepSeek, Kimi, or any OpenAI-compatible endpoint, including one running on your own machine. You paste it into the extension's options page exactly once, and it stays in your browser profile from then on. The text of the pages you condense travels to that provider to be summarized and comes straight back; it is not logged, collected, or seen by anyone else, and there are no analytics of any kind in the extension. What you read is your business.</p>
     <h2 class="ten" data-ten>Your key stays in your browser; no analytics, no middleman</h2>
     <div class="detail">
-      <p>Bring a key from Anthropic, OpenAI, DeepSeek, Kimi, or any OpenAI-compatible endpoint — even one on your own machine. Paste it once; page text goes only to the provider you chose. Details in the <a href="/privacy.html">privacy policy</a>.</p>
+      <p data-ten>Bring your own key: Anthropic, OpenAI, DeepSeek, Kimi, or others.</p>
+      <p data-ten>Any OpenAI-compatible endpoint works, even one on your own machine.</p>
+      <p data-ten>Paste it once; text goes only to your chosen provider.</p>
+      <p data-ten>The <a href="/privacy.html">privacy policy</a> says all of this in plain language.</p>
     </div>
   </section>
 
