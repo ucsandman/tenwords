@@ -1,4 +1,6 @@
 import { summarizeBlocks } from './lib/summarizer.js'
+import { createClient, resolveProvider } from './lib/providers.js'
+import { loadSettings } from './config.js'
 
 async function trigger(tabId) {
   try {
@@ -37,33 +39,11 @@ function safePost(port, msg) {
   try { port.postMessage(msg) } catch { /* content side went away */ }
 }
 
-function apiClient(key) {
-  return {
-    messages: {
-      create: async req => {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            'x-api-key': key,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true',
-          },
-          body: JSON.stringify(req),
-        })
-        if (!res.ok) {
-          if (res.status === 401) throw new Error('invalid API key — update it in TenWords options')
-          const body = await res.json().catch(() => ({}))
-          throw new Error(body.error?.message || `Anthropic API error ${res.status}`)
-        }
-        return res.json()
-      },
-    },
-  }
-}
-
-async function summarizeDirect(port, blocks, key) {
-  await summarizeBlocks(blocks, apiClient(key), event => safePost(port, event))
+async function summarizeDirect(port, blocks, settings) {
+  const client = createClient(resolveProvider(settings), {
+    keyHelp: ' — update it in TenWords options',
+  })
+  await summarizeBlocks(blocks, client, event => safePost(port, event))
   safePost(port, { type: 'done' })
 }
 
@@ -101,8 +81,8 @@ chrome.runtime.onConnect.addListener(port => {
   if (port.name !== 'summarize') return
   port.onMessage.addListener(async msg => {
     try {
-      const { apiKey } = await chrome.storage.local.get('apiKey')
-      if (apiKey) await summarizeDirect(port, msg.blocks, apiKey)
+      const settings = await loadSettings()
+      if (settings.apiKey) await summarizeDirect(port, msg.blocks, settings)
       else await summarizeViaService(port, msg.blocks)
     } catch (err) {
       safePost(port, { type: 'error', error: err.message })

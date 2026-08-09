@@ -1,6 +1,7 @@
 import { countWords, endsOnConnector, fixToTen, parseJson } from './words.js'
+import { PROVIDERS } from './providers.js'
 
-export const MODEL = 'claude-haiku-4-5-20251001'
+export const MODEL = PROVIDERS.anthropic.defaultModel
 export const BATCH_SIZE = 40
 const CONCURRENCY = 4
 
@@ -13,8 +14,16 @@ const RULES = `Rules:
 - A hyphenated word is one item.
 - Respond with ONLY the JSON object, no other text.`
 
-function firstText(response) {
-  return response.content?.[0]?.text ?? ''
+function firstText(dialect, response) {
+  return dialect === 'openai'
+    ? response.choices?.[0]?.message?.content ?? ''
+    : response.content?.[0]?.text ?? ''
+}
+
+function hitTokenCeiling(dialect, response) {
+  return dialect === 'openai'
+    ? response.choices?.[0]?.finish_reason === 'length'
+    : response.stop_reason === 'max_tokens'
 }
 
 function textOf(value) {
@@ -31,15 +40,18 @@ function rejectionReason(text) {
 }
 
 async function call(client, prompt) {
+  const dialect = client.dialect ?? 'anthropic'
+  const tokenParam = client.tokenParam
+    ?? (dialect === 'openai' ? 'max_completion_tokens' : 'max_tokens')
   const response = await client.messages.create({
-    model: MODEL,
-    max_tokens: 16384,
+    model: client.model ?? MODEL,
+    [tokenParam]: 16384,
     messages: [{ role: 'user', content: prompt }],
   })
-  if (response.stop_reason === 'max_tokens') {
+  if (hitTokenCeiling(dialect, response)) {
     throw new Error('document too large for one batch — try a shorter page')
   }
-  return parseJson(firstText(response))
+  return parseJson(firstText(dialect, response))
 }
 
 async function summarizeBatch(blocks, client, withTldr) {

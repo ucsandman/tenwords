@@ -3,7 +3,7 @@
 // if these copies drift.
 import { copyFileSync, mkdirSync } from 'node:fs'
 
-const FILES = ['words.js', 'summarizer.js']
+const FILES = ['words.js', 'summarizer.js', 'providers.js']
 mkdirSync(new URL('../extension/lib/', import.meta.url), { recursive: true })
 for (const f of FILES) {
   copyFileSync(

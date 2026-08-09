@@ -1,7 +1,7 @@
 # Chrome Web Store listing — TenWords
 
-Everything needed to submit `dist/tenwords-0.3.0.zip` (rebuild any time with
-`powershell Compress-Archive -Path extension\* -DestinationPath dist\tenwords-0.3.0.zip -Force`).
+Everything needed to submit `dist/tenwords-0.4.0.zip` (rebuild any time with
+`powershell Compress-Archive -Path extension\* -DestinationPath dist\tenwords-0.4.0.zip -Force`).
 
 ## Listing fields
 
@@ -27,11 +27,11 @@ How to use it:
 - Or select part of a page, right-click, and choose Condense selection.
 - Press again or hit "restore original" to get the full text back.
 
-Setup: open the extension options and paste your own Anthropic API key.
-Summaries are generated with Claude Haiku; a long article costs roughly a
-tenth of a cent of API usage. Your key stays in your browser profile and is
-sent only to api.anthropic.com. (Alternative for developers: run the
-open-source local TenWords service and skip the key.)
+Setup: open the extension options, choose your provider (Anthropic, OpenAI,
+DeepSeek, Kimi, or any OpenAI-compatible endpoint), and paste your own API
+key. On a small model a long article costs roughly a tenth of a cent of API
+usage. Your key stays in your browser profile, and your key and page text go
+only to the provider you choose.
 
 The ten-word guarantee is enforced in code, not trusted from the model:
 word counts are checked, wrong summaries are retried with the reason, and
@@ -60,19 +60,27 @@ paragraph summaries, in place, at the user's request.
   the icon, presses the shortcut, or uses the context menu.
 - `scripting` — inject the content script that replaces paragraphs and
   restores them.
-- `storage` — store the user's own Anthropic API key locally.
+- `storage` — store the user's own provider choice, model, and API key locally.
 - `contextMenus` — the "Condense selection" right-click item.
 - Host `https://api.anthropic.com/*` — send paragraph text to the user's
   own Anthropic account to generate summaries.
+- Host `https://api.openai.com/*` — same, for users who choose OpenAI.
+- Host `https://api.deepseek.com/*` — same, for users who choose DeepSeek.
+- Host `https://api.moonshot.ai/*` — same, for users who choose Kimi.
 - Host `http://localhost:4710/*` — optional mode that talks to the
   open-source TenWords service running on the user's machine instead.
+- Optional hosts `https://*/*` and `http://localhost/*` — never requested up
+  front. If the user picks the "Custom" provider, the extension asks Chrome
+  for that one base URL's origin at save time, so people can point TenWords
+  at their own OpenAI-compatible endpoint (Ollama, vLLM, and the rest).
 
-**Data usage disclosure:** Website content (page text) is transmitted to
-Anthropic's API solely to generate the summaries the user requested; it is
-not collected, stored, or shared by the developer. Authentication
+**Data usage disclosure:** Website content (page text) is transmitted to the
+AI provider the user selected (Anthropic, OpenAI, DeepSeek, Kimi, or the
+user's own endpoint) solely to generate the summaries the user requested; it
+is not collected, stored, or shared by the developer. Authentication
 information (the user's own API key) is stored locally and transmitted only
-to api.anthropic.com. No data is sold, no data is used for unrelated
-purposes, no data is used for creditworthiness.
+to that provider. No data is sold, no data is used for unrelated purposes, no
+data is used for creditworthiness.
 
 **Remote code:** No. All executed code ships in the package; the API
 returns data (JSON text), not code.
@@ -81,7 +89,7 @@ returns data (JSON text), not code.
 
 1. Create/log into the developer account at
    https://chrome.google.com/webstore/devconsole ($5 one-time fee).
-2. New item → upload `dist/tenwords-0.3.0.zip`.
+2. New item → upload `dist/tenwords-0.4.0.zip`.
 3. Paste the listing fields above; upload the three screenshots.
 4. Privacy tab: fill in the single purpose, justifications, and data
    disclosures above; set the privacy policy URL.

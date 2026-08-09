@@ -17,12 +17,15 @@
   .muted { color: #595959; font-size: 0.875rem; }
   @media (prefers-color-scheme: dark) { .muted { color: #a8a8a8; } }
   label { display: block; margin: 1rem 0 0.3rem; }
-  input[type="password"], input[type="text"] {
+  input[type="password"], input[type="text"], select {
     width: 100%; box-sizing: border-box; padding: 0.55rem 0.7rem;
     font: inherit; font-size: 0.875rem;
     border: 1px solid #c4c4c4; border-radius: 6px; background: transparent; color: inherit;
   }
-  @media (prefers-color-scheme: dark) { input[type="password"], input[type="text"] { border-color: #4a4a4a; } }
+  @media (prefers-color-scheme: dark) {
+    input[type="password"], input[type="text"], select { border-color: #4a4a4a; }
+    select option { background: #1b1b1b; }
+  }
   .row { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
   button {
     padding: 0.5rem 1rem; font: inherit; font-size: 0.875rem; cursor: pointer;
@@ -33,26 +36,38 @@
   #status { min-height: 1.4em; font-style: italic; }
   #status.error { color: #9c2f26; font-style: normal; }
   @media (prefers-color-scheme: dark) { #status.error { color: #e08a7e; } }
-  :is(button, input):focus-visible { outline: 2px solid #9c2f26; outline-offset: 2px; }
+  :is(button, input, select):focus-visible { outline: 2px solid #9c2f26; outline-offset: 2px; }
 </style>
 </head>
 <body>
 <h1>TenWords</h1>
-<p class="muted">With an Anthropic API key, TenWords condenses pages by calling
-Anthropic directly. Without one, it uses the local TenWords service at
-localhost:4710.</p>
+<p class="muted">Pick a provider and save its API key, and TenWords condenses
+pages by calling that provider directly. With no key it uses the local
+TenWords service at localhost:4710.</p>
 
-<label for="key">Anthropic API key</label>
-<input type="password" id="key" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+<label for="provider">Provider</label>
+<select id="provider"></select>
+<p class="muted" id="endpoint-hint"></p>
+
+<label for="model">Model</label>
+<input type="text" id="model" autocomplete="off" spellcheck="false">
+
+<div id="base-row" hidden>
+  <label for="baseUrl">Base URL</label>
+  <input type="text" id="baseUrl" placeholder="http://localhost:11434/v1" autocomplete="off" spellcheck="false">
+</div>
+
+<label for="key">API key</label>
+<input type="password" id="key" placeholder="paste your key" autocomplete="off" spellcheck="false">
 <div class="row">
-  <button class="primary" id="save">Save key</button>
+  <button class="primary" id="save">Save</button>
   <button id="verify">Verify key</button>
   <button id="remove">Remove key</button>
 </div>
 <p id="status" role="status" aria-live="polite"></p>
-<p class="muted">The key is stored only in this browser profile
-(chrome.storage.local) and is sent only to api.anthropic.com. Summaries use
-Claude Haiku; a long article costs roughly a tenth of a cent.</p>
-<script src="options.js"></script>
+<p class="muted">Settings stay in this browser profile
+(chrome.storage.local). Your key and page text go only to the provider you
+choose. On a small model a long article costs roughly a tenth of a cent.</p>
+<script type="module" src="options.js"></script>
 </body>
 </html>

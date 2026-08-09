@@ -7,6 +7,7 @@ import express from 'express'
 import multer from 'multer'
 import Anthropic from '@anthropic-ai/sdk'
 import { summarizeBlocks } from './summarizer.js'
+import { createClient, resolveProvider } from './providers.js'
 import { extractUrl, extractFile, paragraphsFromText, toBlocks } from './extract.js'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
@@ -70,19 +71,47 @@ export function createApp(client) {
   return app
 }
 
+// The Anthropic SDK stays the transport for the anthropic dialect (it brings
+// retries and timeouts); every other provider goes through the shared fetch
+// client in providers.js.
+function makeClient(config) {
+  if (config.dialect !== 'anthropic') {
+    return createClient(config, { keyHelp: ` — check ${config.keyVar} in .env` })
+  }
+  const sdk = new Anthropic({ apiKey: config.apiKey })
+  return {
+    dialect: config.dialect,
+    model: config.model,
+    tokenParam: config.tokenParam,
+    messages: { create: body => sdk.messages.create(body) },
+  }
+}
+
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 if (isMain) {
   process.on('unhandledRejection', (reason) => {
     console.error('Unhandled Rejection:', reason)
     process.exit(1)
   })
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('ANTHROPIC_API_KEY missing. Copy .env.example to .env and set it.')
+  let config
+  try {
+    config = resolveProvider({
+      provider: process.env.PROVIDER,
+      model: process.env.MODEL,
+      baseUrl: process.env.BASE_URL,
+    })
+  } catch (err) {
+    console.error(err.message)
+    process.exit(1)
+  }
+  config.apiKey = process.env[config.keyVar] || ''
+  if (!config.apiKey) {
+    console.error(`${config.keyVar} missing for PROVIDER=${config.provider}. Copy .env.example to .env and set it.`)
     process.exit(1)
   }
   const port = Number(process.env.PORT) || 4710
-  const server = createApp(new Anthropic()).listen(port, '127.0.0.1', () => {
-    console.log(`TenWords service running on http://localhost:${port}`)
+  const server = createApp(makeClient(config)).listen(port, '127.0.0.1', () => {
+    console.log(`TenWords service running on http://localhost:${port} (${config.provider} / ${config.model})`)
   })
   server.on('error', (err) => {
     console.error(`Failed to start on port ${port}: ${err.message}`)
