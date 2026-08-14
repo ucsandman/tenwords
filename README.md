@@ -112,3 +112,10 @@ finished batch, then `{"type":"tldr","tldr":"..."}`, then
   `service/providers.js` into `extension/lib/` so BYOK mode runs the exact same
   enforcement code; a test fails if the copies drift, so run it after editing
   any of those files
+
+## Support
+
+If my tools save you time, you can support my work here:
+
+[![Sponsor on GitHub](https://img.shields.io/badge/GitHub%20Sponsors-%E2%9D%A4-db61a2?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/ucsandman)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-%E2%98%95-ffdd00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/wes_sander)
