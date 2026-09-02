@@ -1,0 +1,33 @@
+# TenWords
+
+> TenWords is a Chrome extension that rewrites any webpage, PDF, docx, or pasted text so every paragraph becomes exactly ten words, plus a ten-word TL;DR.
+
+## What it is
+
+TenWords is a local service plus Chrome extension plus web page. It condenses verbose text into ten-word-per-paragraph summaries. The word count is enforced in code, not trusted to the model: every summary is counted, wrong counts are retried once, and anything still off is fixed deterministically. Ten is always literal.
+
+## Who it is for
+
+People reading long AI chat output, articles, PDFs, or documents who want the gist in seconds instead of reading the whole thing.
+
+## What it does
+
+On any webpage, press Alt+T (or click the toolbar icon) to condense the page in place; press again or click "restore original" to undo. Select part of a page and right-click "Condense selection" to condense only that text. TenWords also runs as a local web page (its own service, not tenwords.io) where you can paste a URL, drop a PDF/docx/txt file, or paste raw text for the same ten-word treatment. A typical long article condenses in 20 to 40 seconds.
+
+## Privacy
+
+There is no account and no server run by TenWords in the middle. Bring your own API key from a supported provider (Anthropic, OpenAI, DeepSeek, Kimi, or any OpenAI-compatible endpoint). The key stays in your browser profile and is sent only to the provider you chose. Text being condensed goes to that provider and comes back; it is not logged or collected by TenWords, and the extension has no analytics.
+
+## Pricing
+
+No account or subscription. You use your own API key with your chosen provider, billed by that provider at their rates.
+
+## Pages
+
+- https://tenwords.io/: product page and demo
+- https://tenwords.io/privacy.html: privacy policy
+
+## Links
+
+- Chrome Web Store: https://chromewebstore.google.com/detail/mhniadnpdakfejanehmhnabhakhhbcdl
+- Source: https://github.com/ucsandman/tenwords
