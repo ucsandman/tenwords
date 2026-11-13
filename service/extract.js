@@ -7,6 +7,7 @@ import { lookup } from 'node:dns/promises'
 import { countWords } from './words.js'
 
 const MAX_REDIRECTS = 3
+const MAX_HTML_BYTES = 5 * 1024 * 1024
 
 export function toBlocks(paragraphs) {
   return paragraphs
@@ -94,6 +95,43 @@ export async function assertPublicHost(host, lookupImpl = lookup) {
   }
 }
 
+async function cancelBody(res) {
+  await res.body?.cancel().catch(() => {})
+}
+
+async function readHtml(res) {
+  const contentType = res.headers.get('content-type')?.split(';')[0].trim().toLowerCase()
+  if (contentType && !['text/html', 'application/xhtml+xml'].includes(contentType)) {
+    await cancelBody(res)
+    throw new Error('URL must return HTML; download documents and use file upload instead')
+  }
+  const tooLarge = () => new Error('page exceeds the 5 MiB HTML limit; paste a shorter excerpt instead')
+  const declaredLength = Number(res.headers.get('content-length'))
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_HTML_BYTES) {
+    await cancelBody(res)
+    throw tooLarge()
+  }
+  if (!res.body) return ''
+  const reader = res.body.getReader()
+  const chunks = []
+  let bytes = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      bytes += value.byteLength
+      if (bytes > MAX_HTML_BYTES) throw tooLarge()
+      chunks.push(value)
+    }
+    return Buffer.concat(chunks, bytes).toString('utf8')
+  } catch (error) {
+    await reader.cancel().catch(() => {})
+    throw error
+  } finally {
+    reader.releaseLock()
+  }
+}
+
 export async function extractUrl(url, fetchImpl = fetch, lookupImpl = undefined) {
   let currentUrl = url
   for (let redirects = 0; ; redirects++) {
@@ -108,12 +146,18 @@ export async function extractUrl(url, fetchImpl = fetch, lookupImpl = undefined)
       redirect: 'manual',
     })
     if ([301, 302, 303, 307, 308].includes(res.status)) {
+      await cancelBody(res)
       if (redirects >= MAX_REDIRECTS) throw new Error('too many redirects')
-      currentUrl = new URL(res.headers.get('location'), currentUrl).toString()
+      const location = res.headers.get('location')
+      if (!location?.trim()) throw new Error('redirect missing location header')
+      currentUrl = new URL(location, currentUrl).toString()
       continue
     }
-    if (!res.ok) throw new Error(`fetch failed with status ${res.status}`)
-    return toBlocks(paragraphsFromHtml(await res.text(), currentUrl))
+    if (!res.ok) {
+      await cancelBody(res)
+      throw new Error(`fetch failed with status ${res.status}`)
+    }
+    return toBlocks(paragraphsFromHtml(await readHtml(res), currentUrl))
   }
 }
 

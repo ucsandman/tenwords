@@ -88,7 +88,7 @@ sentence that trails off), and deterministically fixes anything still
 wrong — you never see a line that isn't exactly ten words. For
 multi-batch documents the TL;DR is written from the finished summaries
 in one final call. `POST /extract` turns URLs (Readability) and files
-(pdf-parse / mammoth) into blocks.
+(pdf-parse / mammoth) into blocks. URL extraction accepts HTML only, limits decoded downloads to 5 MiB even when size headers are absent or wrong, and closes discarded redirect/error bodies. For larger pages, paste a shorter excerpt; upload PDF/docx/txt documents directly.
 
 ## API
 

@@ -52,7 +52,7 @@ test('paragraphsFromHtml pulls article paragraphs, not nav junk', () => {
 
 test('extractUrl fetches and returns blocks', async () => {
   const html = `<html><body><article><p>${LONG}</p></article></body></html>`
-  const fakeFetch = async () => ({ ok: true, status: 200, headers: new Map(), text: async () => html })
+  const fakeFetch = async () => new Response(html, {headers:{'content-type':'text/html'}})
   const blocks = await extractUrl('https://example.com/x', fakeFetch, publicLookup)
   assert.equal(blocks.length, 1)
   assert.equal(blocks[0].id, 'p0')
@@ -103,7 +103,7 @@ test('extractUrl follows a redirect to a public host', async () => {
     if (calls === 1) {
       return { ok: false, status: 302, headers: new Map([['location', 'https://example.com/final']]), text: async () => '' }
     }
-    return { ok: true, status: 200, headers: new Map(), text: async () => html }
+    return new Response(html, {headers:{'content-type':'text/html'}})
   }
   const blocks = await extractUrl('https://example.com/start', fakeFetch, publicLookup)
   assert.equal(blocks.length, 1)
