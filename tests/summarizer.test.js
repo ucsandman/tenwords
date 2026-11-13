@@ -157,3 +157,29 @@ test('rejects with a clear error when the response hit the token ceiling', async
   }
   await assert.rejects(() => summarizeBlocks(BLOCKS, client), /too large/)
 })
+
+test('a failed batch stops queued calls and settles active work before rejecting', async () => {
+  const blocks = Array.from({ length: 240 }, (_, i) => ({ id: `p${i}`, text: LONG_TEXT }))
+  let calls = 0
+  let active = 0
+  const events = []
+  const failure = new Error('provider unavailable')
+  const client = { messages: { create: async request => {
+    const index = calls++
+    if (index === 0) throw failure
+    active++
+    await new Promise(resolve => setTimeout(resolve, 10))
+    active--
+    const batch = JSON.parse(request.messages[0].content.split('Blocks:\n')[1])
+    return { content: [{ text: JSON.stringify({ summaries: batch.map(b => ({ id: b.id, text: TEN })) }) }] }
+  } } }
+  await assert.rejects(summarizeBlocks(blocks, client, e => events.push(e)), error => error === failure)
+  // Wait for already-started provider calls, but never start the remaining batches.
+  assert.equal(active, 0)
+  assert.equal(calls, 4)
+  assert.equal(events.filter(e => e.type === 'tldr').length, 0)
+  const eventCount = events.length
+  await new Promise(resolve => setTimeout(resolve, 30))
+  assert.equal(calls, 4)
+  assert.equal(events.length, eventCount)
+})

@@ -160,13 +160,24 @@ ${JSON.stringify(summaries.map(s => s.text))}`
 async function pool(items, limit, worker) {
   const results = new Array(items.length)
   let next = 0
+  let failed = false
+  let firstError
   async function lane() {
-    while (next < items.length) {
+    while (!failed && next < items.length) {
       const i = next++
-      results[i] = await worker(items[i], i)
+      try {
+        results[i] = await worker(items[i], i)
+      } catch (error) {
+        if (!failed) firstError = error
+        failed = true
+      }
     }
   }
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane))
+  // Already-started requests cannot be recalled, but no queued work should
+  // start after a failure. Settle active lanes before the caller closes its
+  // stream, so progress callbacks cannot write after the terminal error.
+  if (failed) throw firstError
   return results
 }
 
